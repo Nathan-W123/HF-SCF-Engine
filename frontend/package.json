@@ -8,7 +8,8 @@
     "react-scripts": "5.0.1",
     "axios": "^1.7.2",
     "3dmol": "^2.1.0",
-    "lucide-react": "^0.395.0"
+    "lucide-react": "^0.395.0",
+    "lodash": "4.17.21"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.4",
@@ -19,6 +20,9 @@
     "start": "react-scripts start",
     "build": "node --max-old-space-size=4096 node_modules/.bin/react-scripts build",
     "test": "react-scripts test"
+  },
+  "overrides": {
+    "lodash": "4.17.21"
   },
   "browserslist": {
     "production": [">0.2%", "not dead", "not op_mini all"],

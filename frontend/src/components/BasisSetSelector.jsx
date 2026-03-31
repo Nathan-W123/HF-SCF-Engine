@@ -19,11 +19,17 @@ const DEFAULT_OPTIONS = {
     { value: "mar", label: "mar- (s-diffuse only)" },
   ],
   base_families: [
-    { value: "cc-pV", label: "Dunning cc-pV (correlation-consistent)" },
+    { value: "sto-3g",  label: "STO-3G (minimal)",              fixed: true },
+    { value: "6-31g",   label: "6-31G (Pople split-valence)",   fixed: true },
+    { value: "6-31g*",  label: "6-31G* (+ d polarization)",     fixed: true },
+    { value: "6-31g**", label: "6-31G** (+ d,p polarization)",  fixed: true },
+    { value: "cc-pV",   label: "Dunning cc-pV (correlation-consistent)" },
     { value: "cc-pwCV", label: "Dunning cc-pwCV (core-valence)" },
-    { value: "def2", label: "Weigend-Ahlrichs def2" },
+    { value: "def2",    label: "Weigend-Ahlrichs def2" },
   ],
 };
+
+const FIXED_BASES = ["sto-3g", "6-31g", "6-31g*", "6-31g**"];
 
 function BasisRecipeModal({ onClose, onSave }) {
   const [name, setName] = useState("");
@@ -160,10 +166,13 @@ export default function BasisSetSelector({
   };
 
   // Compute preview label
+  const isFixed = FIXED_BASES.includes(baseFamily);
   const calLabel = calendarPrefix ? `${calendarPrefix}-` : "";
-  const preview = baseFamily === "def2"
-    ? `def2-${zetaLevel === "D" ? "SVP" : zetaLevel === "T" ? "TZVP" : "QZVP"}`
-    : `${calLabel}${baseFamily}${zetaLevel}Z`;
+  const preview = isFixed
+    ? baseFamily
+    : baseFamily === "def2"
+      ? `def2-${zetaLevel === "D" ? "SVP" : zetaLevel === "T" ? "TZVP" : "QZVP"}`
+      : `${calLabel}${baseFamily}${zetaLevel}Z`;
 
   return (
     <div className="card space-y-4">
@@ -210,7 +219,8 @@ export default function BasisSetSelector({
           </select>
         </div>
 
-        {/* Zeta Level */}
+        {/* Zeta Level — hidden for fixed bases */}
+        {!isFixed && (
         <div>
           <label className="label">Zeta Level</label>
           <div className="grid grid-cols-4 gap-1.5">
@@ -229,8 +239,10 @@ export default function BasisSetSelector({
             ))}
           </div>
         </div>
+        )}
 
-        {/* Calendar Convention */}
+        {/* Calendar Convention — hidden for fixed bases */}
+        {!isFixed && (
         <div>
           <label className="label">
             Diffuse Functions
@@ -263,6 +275,7 @@ export default function BasisSetSelector({
             </p>
           )}
         </div>
+        )}
       </div>
 
       {/* Saved Recipes */}

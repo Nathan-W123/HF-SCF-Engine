@@ -24,6 +24,17 @@ export default function App() {
   const [baseFamily, setBaseFamily] = useState("cc-pV");
   const [selectedRecipeId, setSelectedRecipeId] = useState(null);
 
+  const FIXED_BASES = ["sto-3g", "6-31g", "6-31g*", "6-31g**"];
+  const buildBasisName = useCallback(() => {
+    if (FIXED_BASES.includes(baseFamily)) return baseFamily;
+    if (baseFamily === "def2") {
+      const map = { D: "def2-svp", T: "def2-tzvp", Q: "def2-qzvp" };
+      return map[zetaLevel] || "def2-svp";
+    }
+    const cal = calendarPrefix ? `${calendarPrefix}-` : "";
+    return `${cal}${baseFamily}${zetaLevel}Z`.toLowerCase();
+  }, [baseFamily, zetaLevel, calendarPrefix]);
+
   // Calculation state
   const [result, setResult] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -38,14 +49,11 @@ export default function App() {
     try {
       const data = await runCalculation({
         xyz_input: xyz,
-        zeta_level: zetaLevel,
-        calendar_prefix: calendarPrefix,
-        base_family: baseFamily,
+        basis: buildBasisName(),
         charge,
         spin,
         max_cycles: maxCycles,
         molecule_name: moleculeName || null,
-        basis_recipe_id: selectedRecipeId || null,
       });
       setResult(data);
     } catch (e) {
@@ -53,7 +61,7 @@ export default function App() {
     } finally {
       setIsCalculating(false);
     }
-  }, [xyz, zetaLevel, calendarPrefix, baseFamily, charge, spin, maxCycles, moleculeName, selectedRecipeId]);
+  }, [xyz, buildBasisName, charge, spin, maxCycles, moleculeName]);
 
   const handleLoadHistory = useCallback((calc) => {
     // Load result from history into results panel (metadata only, no live mol objects)

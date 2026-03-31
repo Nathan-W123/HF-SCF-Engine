@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HF-SCF Molecular Calculator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://3dmol.org/build/3Dmol-min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { mono: ['JetBrains Mono','Fira Code','monospace'] }
+    }
+  }
+}
+</script>
+<style>
+  body { background:#0f172a; color:#f1f5f9; font-family:system-ui,sans-serif; }
+  #viewer { width:100%; height:380px; background:#060d1a; border-radius:0.75rem; position:relative; }
+  .energy { font-family:monospace; color:#4ade80; font-size:1.1rem; font-weight:700; }
+  input[type=range] { accent-color:#3b82f6; }
+  ::-webkit-scrollbar { width:5px; height:5px; }
+  ::-webkit-scrollbar-track { background:#1e293b; }
+  ::-webkit-scrollbar-thumb { background:#475569; border-radius:3px; }
+  select option { background:#1e293b; }
+  .orb-homo { background:rgba(59,130,246,.15); }
+  .orb-lumo { background:rgba(168,85,247,.15); }
+  details > summary { cursor:pointer; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Header -->
+<header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-20 px-4 py-3">
+  <div class="max-w-7xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 22A10 10 0 0 1 2 12"/>
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10"/><circle cx="12" cy="12" r="8" opacity=".3"/>
+      </svg>
+      <span class="font-bold text-slate-100">HF-SCF Molecular Calculator</span>
+      <span class="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">Hartree-Fock / RHF</span>
+    </div>
+    <span class="text-xs text-slate-500">Custom HF engine · NumPy/SciPy · SQLite</span>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- ─── LEFT COLUMN ─── -->
+    <div class="space-y-4">
+
+      <!-- Molecule Input -->
+      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <span class="text-blue-400">⬡</span> Molecule Input
+          </h2>
+          <div class="relative">
+            <button onclick="togglePresets()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+              Presets ▾
+            </button>
+            <div id="presets-menu" class="hidden absolute right-0 top-full mt-1 z-10 bg-slate-800 border border-slate-600 rounded-lg shadow-xl min-w-[200px] py-1">
+              <button onclick="setPreset('water')"    class="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-700">Water (H₂O)</button>
+              <button onclick="setPreset('ammonia')"  class="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-700">Ammonia (NH₃)</button>
+              <button onclick="setPreset('methane')"  class="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-700">Methane (CH₄)</button>
+              <button onclick="setPreset('h2')"       class="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-700">Hydrogen (H₂)</button>
+              <button onclick="setPreset('co')"       class="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-700">CO</button>
+              <button onclick="setPreset('h2co')"     class="w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-slate-700">Formaldehyde (H₂CO)</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Molecule Name</label>
+          <input id="mol-name" type="text" placeholder="e.g. Water" value="Water"
+            class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-500"/>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">XYZ Geometry <span class="text-slate-500 font-normal normal-case">(Ångströms)</span></label>
+          <textarea id="xyz-input" rows="8" spellcheck="false"
+            class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-500"
+            placeholder="O  0.000  0.000  0.117&#10;H  0.000  0.757 -0.471&#10;H  0.000 -0.757 -0.471">O  0.000000  0.000000  0.117176
+H  0.000000  0.757001 -0.468704
+H  0.000000 -0.757001 -0.468704</textarea>
+          <p class="text-xs text-slate-500 mt-1">Format: <code class="font-mono">Symbol  X  Y  Z</code> — one atom per line</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Charge</label>
+            <input id="charge" type="number" value="0" min="-10" max="10"
+              class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Spin 2S <span class="text-slate-500 font-normal">(0=singlet)</span></label>
+            <input id="spin" type="number" value="0" min="0" max="20"
+              class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Basis Set -->
+      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <span class="text-purple-400">◈</span> Basis Set
+          </h2>
+          <span id="basis-preview" class="font-mono text-xs text-purple-300 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-800">STO-3G</span>
+        </div>
+        <div id="basis-buttons" class="space-y-3">
+          <!-- Pople -->
+          <div>
+            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Pople</label>
+            <div class="grid grid-cols-2 gap-1.5">
+              <button onclick="setBasis('sto-3g')"  data-b="sto-3g"  class="basis-btn active py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-blue-600 border-blue-500 text-white">STO-3G</button>
+              <button onclick="setBasis('6-31g')"   data-b="6-31g"   class="basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500">6-31G</button>
+              <button onclick="setBasis('6-31g*')"  data-b="6-31g*"  class="basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500">6-31G*</button>
+              <button onclick="setBasis('6-31g**')" data-b="6-31g**" class="basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500">6-31G**</button>
+            </div>
+          </div>
+          <!-- Dunning correlation-consistent -->
+          <div>
+            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Dunning (cc-pV) <span class="normal-case text-slate-600 font-normal">· fetched on first use</span></label>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button onclick="setBasis('cc-pvdz')"  data-b="cc-pvdz"  class="basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500">cc-pVDZ</button>
+              <button onclick="setBasis('cc-pvtz')"  data-b="cc-pvtz"  class="basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500">cc-pVTZ</button>
+              <button onclick="setBasis('cc-pvqz')"  data-b="cc-pvqz"  class="basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500">cc-pVQZ</button>
+            </div>
+          </div>
+          <!-- Calendar — augmented Dunning -->
+          <div>
+            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Calendar (aug-cc-pV) <span class="normal-case text-slate-600 font-normal">· diffuse functions</span></label>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button onclick="setBasis('aug-cc-pvdz')" data-b="aug-cc-pvdz" class="basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500">aDZ</button>
+              <button onclick="setBasis('aug-cc-pvtz')" data-b="aug-cc-pvtz" class="basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500">aTZ</button>
+              <button onclick="setBasis('aug-cc-pvqz')" data-b="aug-cc-pvqz" class="basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500">aQZ</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saved Recipes -->
+        <div class="border-t border-slate-700 pt-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Saved Recipes</span>
+            <button onclick="openRecipeModal()" class="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1">+ Save current</button>
+          </div>
+          <div id="recipes-list" class="space-y-1 max-h-32 overflow-y-auto">
+            <p class="text-xs text-slate-600 italic">Loading...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced + Run -->
+      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+        <details>
+          <summary class="text-xs text-slate-400 font-semibold uppercase tracking-wider hover:text-slate-300 transition-colors">Advanced SCF Options</summary>
+          <div class="mt-3">
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Max SCF Cycles</label>
+            <input id="max-cycles" type="number" value="200" min="10" max="1000"
+              class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          </div>
+        </details>
+      </div>
+
+      <button id="estimate-btn" onclick="estimateCalculation()"
+        class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold px-4 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed">
+        ⏱ Estimate Time
+      </button>
+
+      <div id="estimate-panel" class="hidden bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-2.5 text-sm"></div>
+
+      <button id="run-btn" onclick="runCalculation()"
+        class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-base disabled:opacity-40 disabled:cursor-not-allowed">
+        ▶ Run Calculation
+      </button>
+
+      <div id="calc-error" class="hidden bg-red-950/40 border border-red-800 rounded-xl px-4 py-3 text-red-300 text-sm"></div>
+
+      <!-- History -->
+      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <span class="text-orange-400">⏱</span> Calculation History
+          </h2>
+          <button onclick="loadHistory()" class="text-slate-400 hover:text-slate-200 text-sm">↺</button>
+        </div>
+        <div id="history-list" class="space-y-1.5 max-h-64 overflow-y-auto">
+          <p class="text-xs text-slate-600 italic py-4 text-center">No calculations yet</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RIGHT COLUMNS ─── -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- 3D Viewer -->
+      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-3">
+        <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+          <span class="text-green-400">◉</span> 3D Molecular Viewer
+        </h2>
+        <div id="viewer">
+          <div id="viewer-placeholder" class="absolute inset-0 flex items-center justify-center text-slate-600 text-sm rounded-xl">
+            Run a calculation to view the molecule
+          </div>
+          <div id="viewer-loading" class="hidden absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl z-10">
+            <span class="text-slate-300 text-sm flex items-center gap-2"><span class="animate-spin">⟳</span> Generating orbital cube...</span>
+          </div>
+        </div>
+        <div id="orbital-controls" class="hidden space-y-3">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Molecular Orbitals</span>
+              <button onclick="clearOrbitals()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">Clear</button>
+            </div>
+            <div id="orb-buttons" class="grid grid-cols-4 gap-1.5"></div>
+          </div>
+          <div id="isosurface-controls" class="hidden bg-slate-800/50 rounded-lg p-3 space-y-2 border border-slate-700">
+            <span class="text-xs text-slate-400 font-semibold">Isosurface Controls</span>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-slate-400 w-24">Isovalue: <span id="iso-val">0.040</span></span>
+              <input type="range" id="isovalue" min="0.005" max="0.15" step="0.005" value="0.04" oninput="updateIsoLabel(this.value)" class="flex-1"/>
+            </div>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="show-pos" checked onchange="toggleLobes()" class="accent-blue-500"/>
+                <span class="w-3 h-3 rounded-sm bg-blue-500 inline-block"></span> +phase
+              </label>
+              <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
+                <input type="checkbox" id="show-neg" checked onchange="toggleLobes()" class="accent-red-500"/>
+                <span class="w-3 h-3 rounded-sm bg-red-500 inline-block"></span> −phase
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="results-section">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center justify-center h-24 text-slate-600 text-sm italic">
+          No calculation results yet
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Recipe Modal -->
+<div id="recipe-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+  <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-slate-100 font-semibold">Save Basis Recipe</h3>
+      <button onclick="closeRecipeModal()" class="text-slate-400 hover:text-slate-200 text-xl leading-none">×</button>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Recipe Name *</label>
+        <input id="recipe-name" type="text" placeholder="My Custom Triple-Zeta + Jul Diffuse"
+          class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Description</label>
+        <input id="recipe-desc" type="text" placeholder="Optional..."
+          class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <p id="recipe-error" class="hidden text-red-400 text-sm bg-red-950/30 border border-red-800 rounded-lg px-3 py-2"></p>
+    </div>
+    <div class="flex gap-2 mt-5 justify-end">
+      <button onclick="closeRecipeModal()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors">Cancel</button>
+      <button onclick="saveRecipe()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-lg transition-colors">Save Recipe</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+const state = {
+  basis: 'sto-3g',
+  calcResult: null,
+  activeOrbIdx: null,
+  viewer: null,
+  posShape: null,
+  negShape: null,
+};
+
+const PRESETS = {
+  water:     { name:'Water',       xyz:'O  0.000000  0.000000  0.117176\nH  0.000000  0.757001 -0.468704\nH  0.000000 -0.757001 -0.468704' },
+  ammonia:   { name:'Ammonia',     xyz:'N  0.000000  0.000000  0.113500\nH  0.000000  0.938700 -0.265100\nH  0.812900 -0.469400 -0.265100\nH -0.812900 -0.469400 -0.265100' },
+  methane:   { name:'Methane',     xyz:'C  0.000000  0.000000  0.000000\nH  0.629118  0.629118  0.629118\nH -0.629118 -0.629118  0.629118\nH -0.629118  0.629118 -0.629118\nH  0.629118 -0.629118 -0.629118' },
+  h2:        { name:'Hydrogen',    xyz:'H  0.000000  0.000000  0.370000\nH  0.000000  0.000000 -0.370000' },
+  co:        { name:'CO',          xyz:'C  0.000000  0.000000  0.000000\nO  0.000000  0.000000  1.128000' },
+  h2co:      { name:'Formaldehyde',xyz:'C  0.000000  0.000000  0.000000\nO  0.000000  0.000000  1.208000\nH  0.000000  0.935000 -0.540000\nH  0.000000 -0.935000 -0.540000' },
+};
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initViewer();
+  loadHistory();
+  loadRecipes();
+});
+
+function initViewer() {
+  const el = document.getElementById('viewer');
+  state.viewer = $3Dmol.createViewer(el, { backgroundColor: '0x060d1a', antialias: true });
+}
+
+// ─── Presets ──────────────────────────────────────────────────────────────────
+function togglePresets() {
+  document.getElementById('presets-menu').classList.toggle('hidden');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.relative')) document.getElementById('presets-menu').classList.add('hidden');
+});
+function setPreset(key) {
+  const p = PRESETS[key];
+  document.getElementById('xyz-input').value = p.xyz;
+  document.getElementById('mol-name').value = p.name;
+  document.getElementById('presets-menu').classList.add('hidden');
+}
+
+// ─── Basis controls ───────────────────────────────────────────────────────────
+const BASIS_LABELS = {
+  'sto-3g':      'STO-3G (minimal)',
+  '6-31g':       '6-31G (split-valence)',
+  '6-31g*':      '6-31G* (+ d polarization)',
+  '6-31g**':     '6-31G** (+ d and p polarization)',
+  'cc-pvdz':     'cc-pVDZ (double zeta)',
+  'cc-pvtz':     'cc-pVTZ (triple zeta)',
+  'cc-pvqz':     'cc-pVQZ (quad zeta)',
+  'aug-cc-pvdz': 'aug-cc-pVDZ (calendar DZ)',
+  'aug-cc-pvtz': 'aug-cc-pVTZ (calendar TZ)',
+  'aug-cc-pvqz': 'aug-cc-pVQZ (calendar QZ)',
+};
+
+function setBasis(b) {
+  state.basis = b;
+  document.querySelectorAll('.basis-btn').forEach(btn => {
+    const active = btn.dataset.b === b;
+    btn.className = `basis-btn py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+      active ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-500'}`;
+  });
+  document.getElementById('basis-preview').textContent = b.toUpperCase();
+}
+
+// ─── Recipes ──────────────────────────────────────────────────────────────────
+async function loadRecipes() {
+  const el = document.getElementById('recipes-list');
+  try {
+    const recipes = await apiFetch('/basis-recipes');
+    if (!recipes.length) { el.innerHTML = '<p class="text-xs text-slate-600 italic">No saved recipes yet</p>'; return; }
+    el.innerHTML = recipes.map(r => `
+      <div class="flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer border text-xs transition-colors
+                  bg-slate-800/50 border-slate-700 text-slate-300 hover:border-slate-600"
+           onclick="applyRecipe(${r.id})">
+        <div><span class="font-semibold">${r.name}</span>
+          <span class="ml-2 text-slate-500 font-mono">${r.basis || ''}</span>
+        </div>
+        <button onclick="deleteRecipe(event,${r.id})" class="text-slate-500 hover:text-red-400 ml-2">✕</button>
+      </div>`).join('');
+  } catch { el.innerHTML = '<p class="text-xs text-red-400">Failed to load recipes</p>'; }
+}
+
+function applyRecipe(id) { state.selectedRecipeId = id; }
+
+async function deleteRecipe(e, id) {
+  e.stopPropagation();
+  await apiFetch(`/basis-recipes/${id}`, {method:'DELETE'});
+  loadRecipes();
+}
+
+function openRecipeModal() {
+  document.getElementById('recipe-name').value = '';
+  document.getElementById('recipe-desc').value = '';
+  document.getElementById('recipe-error').classList.add('hidden');
+  document.getElementById('recipe-modal').classList.remove('hidden');
+}
+function closeRecipeModal() { document.getElementById('recipe-modal').classList.add('hidden'); }
+
+async function saveRecipe() {
+  const name = document.getElementById('recipe-name').value.trim();
+  const errEl = document.getElementById('recipe-error');
+  if (!name) { errEl.textContent = 'Name is required'; errEl.classList.remove('hidden'); return; }
+  try {
+    await apiFetch('/basis-recipes', {
+      method:'POST',
+      body: JSON.stringify({
+        name, description: document.getElementById('recipe-desc').value.trim() || null,
+        basis: state.basis
+      })
+    });
+    closeRecipeModal();
+    loadRecipes();
+  } catch(e) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
+}
+
+// ─── Run Calculation ──────────────────────────────────────────────────────────
+async function runCalculation() {
+  const btn = document.getElementById('run-btn');
+  const errEl = document.getElementById('calc-error');
+  errEl.classList.add('hidden');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="animate-spin inline-block mr-2">⟳</span> Running SCF...';
+
+  const payload = {
+    xyz_input: document.getElementById('xyz-input').value,
+    basis: state.basis,
+    charge: parseInt(document.getElementById('charge').value) || 0,
+    spin: parseInt(document.getElementById('spin').value) || 0,
+    max_cycles: parseInt(document.getElementById('max-cycles').value) || 200,
+    molecule_name: document.getElementById('mol-name').value.trim() || null,
+  };
+
+  try {
+    const result = await apiFetch('/calculate', {method:'POST', body: JSON.stringify(payload)});
+    state.calcResult = result;
+    state.activeOrbIdx = null;
+    state.selectedRecipeId = null;
+    renderMolecule(result.atoms);
+    renderResults(result);
+    loadHistory();
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '▶ Run Calculation';
+  }
+}
+
+// ─── Estimate ─────────────────────────────────────────────────────────────────
+function _fmtTime(s) {
+  if (s < 1)    return '< 1s';
+  if (s < 60)   return `~${Math.round(s)}s`;
+  if (s < 3600) return `~${Math.round(s / 60)}m`;
+  return `~${(s / 3600).toFixed(1)}h`;
+}
+function _fmtMem(mb) {
+  if (mb < 1)    return '< 1 MB';
+  if (mb < 1000) return `${Math.round(mb)} MB`;
+  return `${(mb / 1000).toFixed(1)} GB`;
+}
+
+async function estimateCalculation() {
+  const btn = document.getElementById('estimate-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="animate-spin inline-block mr-1">⟳</span> Estimating…';
+  document.getElementById('estimate-panel').classList.add('hidden');
+
+  const payload = {
+    xyz_input: document.getElementById('xyz-input').value,
+    basis:     state.basis,
+    charge:    parseInt(document.getElementById('charge').value) || 0,
+    spin:      parseInt(document.getElementById('spin').value)   || 0,
+  };
+
+  try {
+    const r = await apiFetch('/estimate', { method: 'POST', body: JSON.stringify(payload) });
+    _renderEstimate(r);
+  } catch(e) {
+    const panel = document.getElementById('estimate-panel');
+    panel.innerHTML = `<p class="text-red-400 text-xs">${e.message}</p>`;
+    panel.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '⏱ Estimate Time';
+  }
+}
+
+function _renderEstimate(r) {
+  const panel = document.getElementById('estimate-panel');
+  const mid  = _fmtTime(r.estimated_seconds_mid);
+  const low  = _fmtTime(r.estimated_seconds_low);
+  const high = _fmtTime(r.estimated_seconds_high);
+  panel.innerHTML = `
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pre-calculation Estimate</span>
+      <button onclick="document.getElementById('estimate-panel').classList.add('hidden')"
+              class="text-slate-500 hover:text-slate-300 text-xs leading-none">✕</button>
+    </div>
+    <div class="grid grid-cols-2 gap-2 text-xs">
+      <div class="bg-slate-800 rounded-lg p-2">
+        <div class="text-slate-400 mb-0.5">Basis functions</div>
+        <div class="font-mono text-slate-100 font-semibold">${r.n_basis}</div>
+      </div>
+      <div class="bg-slate-800 rounded-lg p-2">
+        <div class="text-slate-400 mb-0.5">Electrons</div>
+        <div class="font-mono text-slate-100 font-semibold">${r.n_electrons}</div>
+      </div>
+      <div class="bg-slate-800 rounded-lg p-2">
+        <div class="text-slate-400 mb-0.5">Dominant integrals</div>
+        <div class="font-mono text-slate-100 font-semibold">${r.n_dominant_integrals.toLocaleString()}</div>
+      </div>
+      <div class="bg-slate-800 rounded-lg p-2">
+        <div class="text-slate-400 mb-0.5">${r.method === 'RI-JK' ? 'B tensor' : 'ERI tensor'}</div>
+        <div class="font-mono text-slate-100 font-semibold">${_fmtMem(r.memory_mb)}</div>
+      </div>
+    </div>
+    <div class="bg-slate-800 rounded-lg p-2 text-xs">
+      <div class="text-slate-400 mb-0.5">Estimated time <span class="text-slate-600">(${r.method})</span></div>
+      <div class="font-mono text-blue-300 font-semibold text-base">${mid}</div>
+      <div class="text-slate-500 mt-0.5">range: ${low} – ${high}</div>
+    </div>
+    ${r.warning ? `<div class="bg-amber-950/40 border border-amber-800 rounded-lg p-2 text-xs text-amber-300">${r.warning}</div>` : ''}
+  `;
+  panel.classList.remove('hidden');
+}
+
+// ─── 3D Viewer ────────────────────────────────────────────────────────────────
+function renderMolecule(atoms) {
+  if (!atoms || !atoms.length) return;
+  document.getElementById('viewer-placeholder').style.display = 'none';
+  const v = state.viewer;
+  v.clear();
+  const xyz = `${atoms.length}\nHF-SCF\n` +
+    atoms.map(a => `${a.symbol} ${a.x.toFixed(6)} ${a.y.toFixed(6)} ${a.z.toFixed(6)}`).join('\n');
+  v.addModel(xyz, 'xyz');
+  v.setStyle({}, { stick:{radius:0.12, colorscheme:'Jmol'}, sphere:{scale:0.3, colorscheme:'Jmol'} });
+  v.zoomTo();
+  v.render();
+  document.getElementById('orbital-controls').classList.remove('hidden');
+  buildOrbitalButtons();
+}
+
+function buildOrbitalButtons() {
+  const r = state.calcResult;
+  if (!r || !r.orbitals) return;
+  const homoIdx = r.homo_idx ?? 0;
+  const visible = r.orbitals.filter(o => Math.abs(o.index - homoIdx) <= 3);
+  const container = document.getElementById('orb-buttons');
+  container.innerHTML = visible.map(o => {
+    const isH = o.label === 'HOMO', isL = o.label === 'LUMO';
+    return `<button onclick="loadOrbital(${o.index})" id="orb-btn-${o.index}"
+      class="px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors
+      ${isH ? 'bg-blue-950/40 border-blue-800 text-blue-300 hover:border-blue-600'
+             : isL ? 'bg-purple-950/40 border-purple-800 text-purple-300 hover:border-purple-600'
+             : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}"
+      >${o.label}</button>`;
+  }).join('');
+}
+
+async function loadOrbital(idx) {
+  const r = state.calcResult;
+  if (!r) return;
+  document.getElementById('viewer-loading').classList.remove('hidden');
+  try {
+    const resp = await fetch(`/calculate/${r.id}/orbital`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({calculation_id: r.id, orbital_idx: idx, nx:60, ny:60, nz:60})
+    });
+    if (!resp.ok) { const d = await resp.json(); throw new Error(d.detail || 'Cube generation failed'); }
+    const cubeData = await resp.text();
+    const v = state.viewer;
+    const isoVal = parseFloat(document.getElementById('isovalue').value);
+
+    v.removeAllShapes();
+    state.posShape = v.addVolumetricData(cubeData, 'cube', {isoval: isoVal,  color:'blue', opacity:0.75, smoothness:5});
+    state.negShape = v.addVolumetricData(cubeData, 'cube', {isoval:-isoVal, color:'red',  opacity:0.75, smoothness:5});
+    v.render();
+    state.activeOrbIdx = idx;
+    document.getElementById('isosurface-controls').classList.remove('hidden');
+
+    // Highlight active button
+    document.querySelectorAll('[id^="orb-btn-"]').forEach(b => b.classList.remove('ring-2','ring-white/40'));
+    const activeBtn = document.getElementById(`orb-btn-${idx}`);
+    if (activeBtn) activeBtn.classList.add('ring-2','ring-white/40');
+  } catch(e) {
+    alert('Orbital error: ' + e.message);
+  } finally {
+    document.getElementById('viewer-loading').classList.add('hidden');
+  }
+}
+
+function clearOrbitals() {
+  state.viewer.removeAllShapes();
+  state.viewer.render();
+  state.activeOrbIdx = null;
+  document.getElementById('isosurface-controls').classList.add('hidden');
+  document.querySelectorAll('[id^="orb-btn-"]').forEach(b => b.classList.remove('ring-2','ring-white/40'));
+}
+
+function updateIsoLabel(v) {
+  document.getElementById('iso-val').textContent = parseFloat(v).toFixed(3);
+}
+
+function toggleLobes() {
+  if (!state.posShape || !state.negShape) return;
+  state.posShape.setVisible(document.getElementById('show-pos').checked);
+  state.negShape.setVisible(document.getElementById('show-neg').checked);
+  state.viewer.render();
+}
+
+// ─── Results Panel ────────────────────────────────────────────────────────────
+function renderResults(r) {
+  const HA_EV = 27.211386;
+  const homoEv  = r.homo_energy != null ? (r.homo_energy * HA_EV).toFixed(4) : '—';
+  const lumoEv  = r.lumo_energy != null ? (r.lumo_energy * HA_EV).toFixed(4) : '—';
+  const gapEv   = r.homo_lumo_gap != null ? (r.homo_lumo_gap * HA_EV).toFixed(4) : '—';
+  const ipEv    = r.homo_energy != null ? (-r.homo_energy * HA_EV).toFixed(4) : '—';
+
+  const orbRows = (r.orbitals || []).map(o => {
+    const cls = o.label==='HOMO' ? 'orb-homo' : o.label==='LUMO' ? 'orb-lumo' : '';
+    const col = o.label==='HOMO' ? 'text-blue-300 font-bold' : o.label==='LUMO' ? 'text-purple-300 font-bold'
+                : o.occupation > 0 ? 'text-slate-300' : 'text-slate-500';
+    return `<tr class="${cls} border-b border-slate-800/50">
+      <td class="py-1.5 font-mono text-xs ${col}">${o.label}</td>
+      <td class="py-1.5 text-right text-xs text-slate-400">${o.occupation.toFixed(0)}</td>
+      <td class="py-1.5 text-right font-mono text-xs text-slate-300">${o.energy_hartree.toFixed(6)}</td>
+      <td class="py-1.5 text-right font-mono text-xs text-slate-400">${o.energy_ev.toFixed(3)}</td>
+    </tr>`;
+  }).join('');
+
+  const convergedBadge = r.converged
+    ? '<span class="inline-flex items-center gap-1 bg-green-900/50 text-green-400 border border-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">✓ SCF Converged</span>'
+    : '<span class="inline-flex items-center gap-1 bg-red-900/50 text-red-400 border border-red-700 text-xs font-semibold px-2 py-0.5 rounded-full">✗ SCF Did Not Converge</span>';
+
+  const pgBadge = r.point_group_label
+    ? `<span class="inline-flex items-center gap-1 bg-violet-900/40 text-violet-300 border border-violet-700 text-xs font-semibold px-2 py-0.5 rounded-full font-mono" title="Point group">${r.point_group_label}</span>`
+    : '';
+
+  document.getElementById('results-section').innerHTML = `
+  <div class="space-y-3">
+    <!-- Convergence + symmetry -->
+    <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+      <div class="flex flex-wrap items-center gap-2">
+        ${convergedBadge}
+        ${pgBadge}
+      </div>
+      <p class="text-xs text-slate-400 mt-1.5">${r.basis_label} · ${r.n_electrons ?? '?'} electrons · ${r.n_basis ?? '?'} basis functions</p>
+    </div>
+    <!-- Total energy -->
+    <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+      <p class="text-xs text-slate-400 mb-1">Total RHF Energy</p>
+      <p class="energy">${r.total_energy != null ? r.total_energy.toFixed(8) : '—'}</p>
+      <p class="text-xs text-slate-500 mt-0.5">Hartree</p>
+    </div>
+    <!-- HOMO/LUMO + Dipole -->
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-1">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">⚡ Frontier Orbitals</p>
+        ${statRow('HOMO', r.homo_energy != null ? r.homo_energy.toFixed(6) : '—', 'Ha')}
+        ${statRow('HOMO', homoEv, 'eV')}
+        ${statRow('LUMO', r.lumo_energy != null ? r.lumo_energy.toFixed(6) : '—', 'Ha')}
+        ${statRow('LUMO', lumoEv, 'eV')}
+        ${statRow('Gap (H-L)', gapEv, 'eV', true)}
+        ${statRow('IP (Koopmans)', ipEv, 'eV')}
+      </div>
+      ${r.dipole ? `
+      <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-1">
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">⬡ Dipole Moment</p>
+        ${statRow('μx', r.dipole.x.toFixed(4), 'D')}
+        ${statRow('μy', r.dipole.y.toFixed(4), 'D')}
+        ${statRow('μz', r.dipole.z.toFixed(4), 'D')}
+        ${statRow('|μ| total', r.dipole.total.toFixed(4), 'D', true)}
+      </div>` : ''}
+    </div>
+    <!-- Orbital table -->
+    ${orbRows ? `
+    <div class="bg-slate-900 border border-slate-700 rounded-xl p-4">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">◈ Orbital Energies</p>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead><tr class="border-b border-slate-700">
+            <th class="text-left py-1.5 text-slate-400 font-semibold text-xs">Label</th>
+            <th class="text-right py-1.5 text-slate-400 font-semibold text-xs">Occ.</th>
+            <th class="text-right py-1.5 text-slate-400 font-semibold text-xs">Energy (Ha)</th>
+            <th class="text-right py-1.5 text-slate-400 font-semibold text-xs">Energy (eV)</th>
+          </tr></thead>
+          <tbody>${orbRows}</tbody>
+        </table>
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
+function statRow(label, value, unit, highlight=false) {
+  return `<div class="flex items-center justify-between py-1.5 border-b border-slate-800">
+    <span class="text-xs text-slate-400">${label}</span>
+    <span class="text-xs font-mono ${highlight ? 'text-blue-300 font-bold' : 'text-slate-300'}">${value}<span class="text-slate-500 ml-1">${unit}</span></span>
+  </div>`;
+}
+
+// ─── History ──────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const el = document.getElementById('history-list');
+  try {
+    const history = await apiFetch('/calculations');
+    if (!history.length) { el.innerHTML = '<p class="text-xs text-slate-600 italic py-4 text-center">No calculations yet</p>'; return; }
+    el.innerHTML = history.map(c => `
+      <div class="flex items-center justify-between bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg px-3 py-2 cursor-pointer transition-colors group"
+           onclick="loadHistoryItem(${c.id})">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="${c.converged ? 'text-green-400' : 'text-red-400'} text-xs font-semibold">${c.converged ? '✓' : '✗'}</span>
+            <span class="text-xs text-slate-200 font-medium truncate">${c.molecule_name || 'Calc #'+c.id}</span>
+          </div>
+          <div class="flex items-center gap-2 mt-0.5">
+            <span class="text-xs font-mono text-slate-500 truncate">${c.basis_label}</span>
+            ${c.total_energy != null ? `<span class="text-xs font-mono text-green-500">${c.total_energy.toFixed(5)} Ha</span>` : ''}
+          </div>
+        </div>
+        <button onclick="deleteHistory(event,${c.id})" class="text-slate-600 hover:text-red-400 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-sm">✕</button>
+      </div>`).join('');
+  } catch { el.innerHTML = '<p class="text-xs text-red-400">Failed to load history</p>'; }
+}
+
+async function loadHistoryItem(id) {
+  try {
+    const r = await apiFetch(`/calculations/${id}`);
+    renderResults(r);
+  } catch(e) { alert('Failed to load: ' + e.message); }
+}
+
+async function deleteHistory(e, id) {
+  e.stopPropagation();
+  await apiFetch(`/calculations/${id}`, {method:'DELETE'});
+  loadHistory();
+}
+
+// ─── API helper ───────────────────────────────────────────────────────────────
+async function apiFetch(path, opts={}) {
+  const res = await fetch(path, {
+    headers: {'Content-Type':'application/json'},
+    ...opts
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    throw new Error(d.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+</script>
+</body>
+</html>

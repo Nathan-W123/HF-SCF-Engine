@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+venv311/
+.env
+
+# Database (persisted on Railway volume, not in repo)
+*.db
+
+# Numba cache
+__numba_cache__/
+
+# Node
+frontend/node_modules/
+frontend/build/
+
+# OS
+.DS_Store
+Thumbs.db

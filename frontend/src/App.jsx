@@ -5,6 +5,7 @@ import BasisSetSelector from "./components/BasisSetSelector";
 import MolecularViewer from "./components/MolecularViewer";
 import ResultsPanel from "./components/ResultsPanel";
 import CalculationHistory from "./components/CalculationHistory";
+import TimeEstimator from "./components/TimeEstimator";
 import { runCalculation } from "./api/client";
 
 const DEFAULT_XYZ = `O  0.000000  0.000000  0.117176
@@ -113,6 +114,13 @@ export default function App() {
               calendarPrefix={calendarPrefix} onCalendarChange={setCalendarPrefix}
               baseFamily={baseFamily} onFamilyChange={setBaseFamily}
               selectedRecipeId={selectedRecipeId} onRecipeSelect={setSelectedRecipeId}
+            />
+
+            <TimeEstimator
+              xyz={xyz}
+              basis={buildBasisName()}
+              charge={charge}
+              spin={spin}
             />
 
             {/* Advanced SCF options */}

@@ -57,5 +57,8 @@ export const deleteBasisRecipe = (id) =>
 export const getBasisOptions = () =>
   api.get("/basis-options").then((r) => r.data);
 
+export const estimateCalculation = (payload) =>
+  api.post("/estimate", payload).then((r) => r.data);
+
 export const healthCheck = () =>
   api.get("/health").then((r) => r.data);

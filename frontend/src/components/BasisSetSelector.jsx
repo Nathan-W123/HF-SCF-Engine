@@ -147,8 +147,8 @@ export default function BasisSetSelector({
   useEffect(() => {
     setLoadingRecipes(true);
     listBasisRecipes()
-      .then(setRecipes)
-      .catch(() => {})
+      .then((data) => setRecipes(Array.isArray(data) ? data : []))
+      .catch(() => setRecipes([]))
       .finally(() => setLoadingRecipes(false));
   }, []);
 

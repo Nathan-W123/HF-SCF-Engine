@@ -9,8 +9,8 @@ export default function CalculationHistory({ onLoad }) {
   const fetchHistory = () => {
     setLoading(true);
     listCalculations()
-      .then(setHistory)
-      .catch(() => {})
+      .then((data) => setHistory(Array.isArray(data) ? data : []))
+      .catch(() => setHistory([]))
       .finally(() => setLoading(false));
   };
 

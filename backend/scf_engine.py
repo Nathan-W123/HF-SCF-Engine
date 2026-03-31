@@ -139,6 +139,12 @@ _PRIM_FACTOR: dict[str, float] = {
     "aug-cc-pvdz": 5.0,
     "aug-cc-pvtz": 10.0,
     "aug-cc-pvqz": 18.0,
+    # Calendar — similar primitive cost to aug, slightly fewer shells
+    "jul-cc-pvdz": 4.8,  "jul-cc-pvtz": 9.5,  "jul-cc-pvqz": 17.0,
+    "jun-cc-pvdz": 4.6,  "jun-cc-pvtz": 9.0,  "jun-cc-pvqz": 16.0,
+    "may-cc-pvdz": 4.3,  "may-cc-pvtz": 8.5,
+    "apr-cc-pvdz": 4.1,  "apr-cc-pvtz": 8.0,
+    "mar-cc-pvdz": 4.0,
 }
 
 # Calibrated from benzene STO-3G benchmark: N=36, ~12.5 s (warm Numba JIT).
@@ -165,6 +171,18 @@ _AUX_BASIS_MAP: dict[str, str] = {
     "cc-pvqz":     "cc-pvqz-jkfit",
     "aug-cc-pvdz": "aug-cc-pvdz-jkfit",
     "aug-cc-pvtz": "aug-cc-pvtz-jkfit",
+    # Calendar bases use the corresponding aug JKFIT auxiliary
+    "jul-cc-pvdz": "aug-cc-pvdz-jkfit",
+    "jul-cc-pvtz": "aug-cc-pvtz-jkfit",
+    "jul-cc-pvqz": "aug-cc-pvqz-jkfit",
+    "jun-cc-pvdz": "aug-cc-pvdz-jkfit",
+    "jun-cc-pvtz": "aug-cc-pvtz-jkfit",
+    "jun-cc-pvqz": "aug-cc-pvqz-jkfit",
+    "may-cc-pvdz": "aug-cc-pvdz-jkfit",
+    "may-cc-pvtz": "aug-cc-pvtz-jkfit",
+    "apr-cc-pvdz": "aug-cc-pvdz-jkfit",
+    "apr-cc-pvtz": "aug-cc-pvtz-jkfit",
+    "mar-cc-pvdz": "aug-cc-pvdz-jkfit",
 }
 
 

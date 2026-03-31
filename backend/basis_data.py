@@ -315,7 +315,7 @@ BASES = {
     "6-31g**":  POPLE_6_31G_STARSTAR,
 }
 
-# Basis sets fetched from BSE on first use (cc-pV / aug-cc-pV families)
+# Basis sets fetched from BSE on first use (cc-pV / aug-cc-pV / calendar families)
 FETCHED_BASES = [
     "cc-pvdz",
     "cc-pvtz",
@@ -323,6 +323,12 @@ FETCHED_BASES = [
     "aug-cc-pvdz",
     "aug-cc-pvtz",
     "aug-cc-pvqz",
+    # Calendar (partial augmentation) — Papajak et al.
+    "jul-cc-pvdz", "jul-cc-pvtz", "jul-cc-pvqz",
+    "jun-cc-pvdz", "jun-cc-pvtz", "jun-cc-pvqz",
+    "may-cc-pvdz", "may-cc-pvtz",
+    "apr-cc-pvdz", "apr-cc-pvtz",
+    "mar-cc-pvdz",
 ]
 
 AVAILABLE_BASES = list(BASES.keys()) + FETCHED_BASES
@@ -337,8 +343,20 @@ BASIS_LABELS = {
     "cc-pvdz":     "cc-pVDZ (double zeta)",
     "cc-pvtz":     "cc-pVTZ (triple zeta)",
     "cc-pvqz":     "cc-pVQZ (quad zeta)",
-    # Calendar — augmented Dunning (diffuse functions)
-    "aug-cc-pvdz": "aug-cc-pVDZ (calendar DZ)",
-    "aug-cc-pvtz": "aug-cc-pVTZ (calendar TZ)",
-    "aug-cc-pvqz": "aug-cc-pVQZ (calendar QZ)",
+    # Full augmentation
+    "aug-cc-pvdz": "aug-cc-pVDZ (full aug DZ)",
+    "aug-cc-pvtz": "aug-cc-pVTZ (full aug TZ)",
+    "aug-cc-pvqz": "aug-cc-pVQZ (full aug QZ)",
+    # Calendar — partial augmentation (Papajak et al.)
+    "jul-cc-pvdz": "jul-cc-pVDZ (drop highest-AM diffuse)",
+    "jul-cc-pvtz": "jul-cc-pVTZ (drop highest-AM diffuse)",
+    "jul-cc-pvqz": "jul-cc-pVQZ (drop highest-AM diffuse)",
+    "jun-cc-pvdz": "jun-cc-pVDZ (drop 2 highest-AM diffuse)",
+    "jun-cc-pvtz": "jun-cc-pVTZ (drop 2 highest-AM diffuse)",
+    "jun-cc-pvqz": "jun-cc-pVQZ (drop 2 highest-AM diffuse)",
+    "may-cc-pvdz": "may-cc-pVDZ (s+p diffuse only)",
+    "may-cc-pvtz": "may-cc-pVTZ (s+p diffuse only)",
+    "apr-cc-pvdz": "apr-cc-pVDZ (s diffuse only on heavy, none on H)",
+    "apr-cc-pvtz": "apr-cc-pVTZ (s diffuse only on heavy, none on H)",
+    "mar-cc-pvdz": "mar-cc-pVDZ (s diffuse only)",
 }

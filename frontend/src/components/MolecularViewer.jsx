@@ -81,29 +81,27 @@ export default function MolecularViewer({ atoms, calcId, orbitals, homoIdx }) {
       const viewer = viewerRef.current;
 
       // Remove previous volumetric surfaces
-      viewer.removeAllShapes();
-      // Keep the molecule model but re-add surfaces
-      const models = viewer.getModel();
+      viewer.removeAllSurfaces();
 
-      const vol = viewer.addVolumetricData(cubeData, "cube", {
-        isoval: isovalue,
-        color: "blue",
-        opacity: 0.75,
-        wireframe: false,
-        smoothness: 5,
-      });
+      if (showPositive) {
+        viewer.addVolumetricData(cubeData, "cube", {
+          isoval: isovalue,
+          color: "blue",
+          opacity: 0.75,
+          wireframe: false,
+          smoothness: 5,
+        });
+      }
 
-      // Add negative lobe
-      const volNeg = viewer.addVolumetricData(cubeData, "cube", {
-        isoval: -isovalue,
-        color: "red",
-        opacity: 0.75,
-        wireframe: false,
-        smoothness: 5,
-      });
-
-      if (vol) vol.setVisible(showPositive);
-      if (volNeg) volNeg.setVisible(showNegative);
+      if (showNegative) {
+        viewer.addVolumetricData(cubeData, "cube", {
+          isoval: -isovalue,
+          color: "red",
+          opacity: 0.75,
+          wireframe: false,
+          smoothness: 5,
+        });
+      }
 
       viewer.render();
       setActiveOrbIdx(orbIdx);

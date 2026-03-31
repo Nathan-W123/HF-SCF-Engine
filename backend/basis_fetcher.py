@@ -4,6 +4,10 @@ https://www.basissetexchange.org
 
 Results are cached in basis_cache.json so internet is only needed once per basis set.
 Shell format returned: {symbol: [(l, exps, coeffs), ...] or ("SP", exps, s_c, p_c)}
+
+Calendar (partial-augmentation) basis sets (jul/jun/may/apr/mar-cc-pVXZ) are NOT
+hosted on BSE. They are constructed here by fetching aug-cc-pVXZ + cc-pVXZ and
+dropping the N highest-AM diffuse shells (Papajak et al., J. Chem. Theory Comput. 2011).
 """
 
 import json
@@ -23,17 +27,77 @@ _VALID_ELEMENTS = {
     "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar",
 }
 
+# Calendar prefix → number of highest-AM diffuse shells to drop per atom
+_CALENDAR_N_DROP: dict[str, int] = {
+    "jul": 1, "jun": 2, "may": 3, "apr": 4, "mar": 5,
+}
+
+
+def _shell_key(shell: tuple) -> tuple:
+    """Hashable key for a shell tuple so we can identify aug-added shells."""
+    if shell[0] == "SP":
+        return ("SP", tuple(shell[1]), tuple(shell[2]), tuple(shell[3]))
+    return (int(shell[0]), tuple(shell[1]), tuple(shell[2]))
+
+
+def _build_calendar_basis(name: str) -> dict[str, list]:
+    """
+    Construct a calendar basis (e.g. jul-cc-pvdz) from aug-cc-pVXZ + cc-pVXZ.
+
+    Algorithm per element:
+      1. diffuse_shells = aug_shells - cc_shells  (set difference by exponents)
+      2. Sort diffuse groups by angular momentum, descending.
+      3. Drop the N highest-AM diffuse groups (N = 1 for jul, 2 for jun, …).
+      4. Result = cc_shells + remaining diffuse shells.
+    """
+    prefix, base_name = name.split("-", 1)   # "jul", "cc-pvdz"
+    n_drop = _CALENDAR_N_DROP[prefix]
+    aug_name = f"aug-{base_name}"            # "aug-cc-pvdz"
+
+    aug_data = get_basis(aug_name)
+    cc_data  = get_basis(base_name)
+
+    result: dict[str, list] = {}
+    for elem, aug_shells in aug_data.items():
+        cc_shells = cc_data.get(elem, [])
+        cc_keys   = {_shell_key(s) for s in cc_shells}
+
+        # Shells present in aug but absent from cc are the diffuse functions
+        diffuse = [s for s in aug_shells if _shell_key(s) not in cc_keys]
+
+        # Gather unique AMs that have diffuse functions, sorted highest-first
+        diffuse_ams = sorted({s[0] if s[0] != "SP" else 1 for s in diffuse}, reverse=True)
+        drop_ams    = set(diffuse_ams[:n_drop])
+
+        kept_diffuse = [
+            s for s in diffuse
+            if (s[0] if s[0] != "SP" else 1) not in drop_ams
+        ]
+        result[elem] = list(cc_shells) + kept_diffuse
+
+    return result
+
 
 def get_basis(name: str) -> dict[str, list]:
     """
     Return basis data for elements 1-18.
-    Fetches from BSE on first call; subsequent calls use local cache.
+    Calendar bases (jul/jun/may/apr/mar-cc-pVXZ) are built programmatically.
+    All others are fetched from BSE on first call; subsequent calls use local cache.
     Raises RuntimeError if fetch fails.
     """
     cache = _load_cache()
     key = name.lower()
     if key in cache:
         return cache[key]
+
+    # Calendar bases are not on BSE — construct from aug + plain cc
+    prefix = key.split("-")[0]
+    if prefix in _CALENDAR_N_DROP:
+        logger.info(f"Building calendar basis '{key}' from aug + cc components...")
+        data = _build_calendar_basis(key)
+        cache[key] = data
+        _save_cache(cache)
+        return data
 
     logger.info(f"Fetching basis '{name}' from BSE (one-time download)...")
     url = BSE_URL.format(name=key)

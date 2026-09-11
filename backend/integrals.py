@@ -10,7 +10,7 @@ Performance:
   tables) is JIT-compiled to native code.  Pure-Python fallback is used otherwise.
 
   Hot-path improvements over the original implementation:
-    1. boys():  erf + upward recurrence / Taylor series  (replaces hyp1f1, ~30x faster)
+    1. boys():  ascending series / erf + upward recurrence  (replaces hyp1f1, ~30x faster)
     2. E table: fully iterative, shared across t/u/v in one call  (no dict overhead)
     3. R table: fully iterative, no recursion  (no dict / call-stack overhead)
     4. Numba JIT: native code for the 4-deep primitive contraction loop
@@ -39,18 +39,23 @@ def boys(n: int, x: float) -> float:
     """
     Boys function F_n(x) = ∫₀¹ t^{2n} exp(−x t²) dt.
 
-    Taylor series for x < 1 (avoids cancellation in upward recurrence);
-    erf-based F_0 + upward recurrence for x ≥ 1.
+    x < 25 : ascending series  F_n(x) = e^{-x} Σ_k (2x)^k (2n-1)!! / (2n+2k+1)!!
+             Every term is positive, so there is no cancellation, and the ratio
+             2x/(2n+2k+1) → 0 guarantees convergence.
+    x ≥ 25 : erf-based F_0 + upward recurrence (stable once x is large, because
+             the subtracted e^{-x} is negligible against F_m).
     """
-    if x < 1.0:
-        total = 0.0
-        term = 1.0 / (2 * n + 1)
-        for k in range(1, 25):
+    if x < 1e-12:
+        return 1.0 / (2 * n + 1)
+    if x < 25.0:
+        term  = 1.0 / (2 * n + 1)
+        total = term
+        for k in range(1, 200):
+            term *= 2.0 * x / (2 * n + 2 * k + 1)
             total += term
-            term *= -x / k / (2 * n + 2 * k + 1)
-            if abs(term) < 1e-15:
+            if term < 1e-17 * total:
                 break
-        return total + term
+        return exp(-x) * total
     f = sqrt(pi) / (2.0 * sqrt(x)) * erf(sqrt(x))
     if n == 0:
         return f
@@ -65,25 +70,38 @@ def boys(n: int, x: float) -> float:
 
 @_njit
 def _boys_array(n_max: int, x: float):
-    """Compute F_0(x) … F_{n_max}(x) in one pass."""
+    """
+    Compute F_0(x) … F_{n_max}(x) in one pass.
+
+    Small x: the ascending series (see boys()) gives the highest order, then the
+    downward recurrence F_{n-1} = (2x F_n + e^{-x}) / (2n-1) fills the rest —
+    downward is the numerically stable direction here.
+    Large x: erf-based F_0 + upward recurrence.
+    """
     fn = np.zeros(n_max + 1)
-    if x < 1.0:
+    if x < 1e-12:
         for n in range(n_max + 1):
-            total = 0.0
-            term = 1.0 / (2 * n + 1)
-            for k in range(1, 25):
-                total += term
-                term *= -x / k / (2 * n + 2 * k + 1)
-                if abs(term) < 1e-15:
-                    break
-            fn[n] = total + term
-    else:
-        fn[0] = sqrt(pi) / (2.0 * sqrt(x)) * erf(sqrt(x))
-        if n_max > 0:
-            ex = exp(-x)
-            inv2x = 0.5 / x
-            for m in range(n_max):
-                fn[m + 1] = ((2 * m + 1) * fn[m] - ex) * inv2x
+            fn[n] = 1.0 / (2 * n + 1)
+        return fn
+    if x < 25.0:
+        term  = 1.0 / (2 * n_max + 1)
+        total = term
+        for k in range(1, 200):
+            term *= 2.0 * x / (2 * n_max + 2 * k + 1)
+            total += term
+            if term < 1e-17 * total:
+                break
+        ex = exp(-x)
+        fn[n_max] = ex * total
+        for n in range(n_max, 0, -1):
+            fn[n - 1] = (2.0 * x * fn[n] + ex) / (2 * n - 1)
+        return fn
+    fn[0] = sqrt(pi) / (2.0 * sqrt(x)) * erf(sqrt(x))
+    if n_max > 0:
+        ex = exp(-x)
+        inv2x = 0.5 / x
+        for m in range(n_max):
+            fn[m + 1] = ((2 * m + 1) * fn[m] - ex) * inv2x
     return fn
 
 

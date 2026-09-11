@@ -12,6 +12,7 @@ dropping the N highest-AM diffuse shells (Papajak et al., J. Chem. Theory Comput
 
 import json
 import logging
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -100,7 +101,9 @@ def get_basis(name: str) -> dict[str, list]:
         return data
 
     logger.info(f"Fetching basis '{name}' from BSE (one-time download)...")
-    url = BSE_URL.format(name=key)
+    # quote: names such as "6-31g*" / "6-31g**" carry characters that must be
+    # percent-encoded before they go into the path.
+    url = BSE_URL.format(name=urllib.parse.quote(key, safe=""))
     try:
         req = urllib.request.Request(
             url, headers={"User-Agent": "hf-scf-calculator/2.0"}
@@ -128,15 +131,24 @@ def get_basis(name: str) -> dict[str, list]:
 # ── NWChem format parser ──────────────────────────────────────────────────────
 
 def _parse_nwchem(text: str) -> dict[str, list]:
-    """Parse NWChem-format basis output from BSE into shell tuples."""
+    """
+    Parse NWChem-format basis output from BSE into shell tuples.
+
+    Correlation-consistent sets are written as *general contractions*: one block
+    per angular momentum carrying several coefficient columns, each column being
+    a separate contracted shell over the same primitives.  cc-pVDZ oxygen, for
+    instance, is a single "O S" block of 9 primitives with 3 columns -> 3 s
+    shells.  Each column is expanded here into its own segmented shell (dropping
+    primitives whose coefficient in that column is zero), which is mathematically
+    equivalent and matches what the rest of the engine expects.
+    """
     result: dict[str, list] = {}
 
     cur_elem: str | None = None
     cur_am: int = 0
     cur_is_sp: bool = False
     cur_exps: list[float] = []
-    cur_c0: list[float] = []   # s-coeffs (or only coeffs for pure shells)
-    cur_c1: list[float] = []   # p-coeffs (SP shells only)
+    cur_rows: list[list[float]] = []   # one row of coefficients per primitive
 
     def _flush():
         nonlocal cur_elem
@@ -146,10 +158,19 @@ def _parse_nwchem(text: str) -> dict[str, list]:
             cur_elem = None
             return
         shells = result.setdefault(cur_elem, [])
+        n_col = max(len(r) for r in cur_rows)
+        cols = [[r[k] if k < len(r) else 0.0 for r in cur_rows] for k in range(n_col)]
         if cur_is_sp:
-            shells.append(("SP", list(cur_exps), list(cur_c0), list(cur_c1)))
+            # NWChem SP: column 0 = s coefficients, column 1 = p coefficients.
+            c0 = cols[0]
+            c1 = cols[1] if n_col > 1 else [0.0] * len(cur_exps)
+            shells.append(("SP", list(cur_exps), list(c0), list(c1)))
         else:
-            shells.append((cur_am, list(cur_exps), list(cur_c0)))
+            for col in cols:
+                exps = [e for e, c in zip(cur_exps, col) if c != 0.0]
+                coef = [c for c in col if c != 0.0]
+                if exps:
+                    shells.append((cur_am, exps, coef))
         cur_elem = None
 
     for raw in text.splitlines():
@@ -174,23 +195,17 @@ def _parse_nwchem(text: str) -> dict[str, list]:
             stype = parts[1].upper()
             cur_is_sp = stype == "SP"
             cur_am = _SHELL_AM.get(stype, 0)
-            cur_exps, cur_c0, cur_c1 = [], [], []
+            cur_exps, cur_rows = [], []
             continue
 
-        # Data row (exponent + coefficient(s))
+        # Data row: exponent followed by one coefficient per contracted shell.
         if cur_elem is not None and len(parts) >= 2:
             try:
-                exp = float(parts[0].replace("D", "E").replace("d", "e"))
-                c0  = float(parts[1].replace("D", "E").replace("d", "e"))
+                vals = [float(p.replace("D", "E").replace("d", "e")) for p in parts]
             except ValueError:
                 continue
-            cur_exps.append(exp)
-            cur_c0.append(c0)
-            if cur_is_sp and len(parts) >= 3:
-                try:
-                    cur_c1.append(float(parts[2].replace("D","E").replace("d","e")))
-                except ValueError:
-                    cur_c1.append(0.0)
+            cur_exps.append(vals[0])
+            cur_rows.append(vals[1:])
 
     _flush()
     return result

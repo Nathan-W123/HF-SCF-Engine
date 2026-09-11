@@ -16,7 +16,7 @@ from typing import Optional
 import numpy as np
 from math import sqrt
 
-from basis_data import BASES, BASIS_LABELS, AVAILABLE_BASES, FETCHED_BASES
+from basis_data import BASIS_LABELS, AVAILABLE_BASES, FETCHED_BASES
 from symmetry import identify_point_group, format_group
 from integrals import overlap, kinetic, nuclear, eri, norm_const, _eri_contracted, _njit, eri_3c, eri_2c, _eri_3c_contracted, _eri_2c_contracted
 from salc import build_salc
@@ -82,15 +82,12 @@ def build_basis(
 ) -> list[BasisFunction]:
     """Build list of BasisFunction objects for the given atoms and basis set."""
     basis_name = basis_name.lower()
-    if basis_name in BASES:
-        basis_data = BASES[basis_name]
-    elif basis_name in FETCHED_BASES:
-        from basis_fetcher import get_basis
-        basis_data = get_basis(basis_name)
-    else:
+    if basis_name not in AVAILABLE_BASES:
         raise ValueError(
             f"Unknown basis '{basis_name}'. Available: {AVAILABLE_BASES}"
         )
+    from basis_fetcher import get_basis
+    basis_data = get_basis(basis_name)
 
     # Cartesian angular momentum components for each l
     AM_COMPONENTS = {
@@ -286,62 +283,9 @@ def compute_one_electron(
 
 # ── Two-electron repulsion integrals ──────────────────────────────────────────
 
-def _salc_symmetry_project(
-    ERI: np.ndarray,
-    U: np.ndarray,
-    sym_blocks: list,
-) -> int:
-    """
-    Project the AO ERI tensor onto the SALC symmetry-allowed subspace in-place.
-
-    Selection rule in the SALC basis: (ãb̃|c̃d̃) = 0 unless Γ(ã)=Γ(b̃) AND Γ(c̃)=Γ(d̃).
-
-    Algorithm:
-      1. Forward 4-index transform: ERI_salc = U^T ⊗ U^T ⊗ U^T ⊗ U^T · ERI_ao
-      2. Zero all (a,b,c,d) where block(a)≠block(b) or block(c)≠block(d)
-      3. Back 4-index transform: ERI_ao = U ⊗ U ⊗ U ⊗ U · ERI_salc
-
-    Returns the number of SALC-basis quartets set to zero.
-    """
-    N = U.shape[0]
-
-    # Map each SALC index to its block index
-    block_of = np.empty(N, dtype=np.intp)
-    for b_idx, b in enumerate(sym_blocks):
-        block_of[b] = b_idx
-
-    # Build allowed mask: (N,N,N,N) bool — True where selection rule is satisfied
-    same_bra = block_of[:, None] == block_of[None, :]   # (N,N)
-    same_ket = same_bra                                   # same shape, reuse
-    allowed = (same_bra[:, :, np.newaxis, np.newaxis]
-               & same_ket[np.newaxis, np.newaxis, :, :])  # (N,N,N,N)
-
-    n_sym_skipped = int(np.count_nonzero(~allowed))
-
-    # Forward transform: AO → SALC  (contract each index with U)
-    E = np.einsum("ia,ijkl->ajkl", U, ERI)
-    E = np.einsum("jb,ajkl->abkl", U, E)
-    E = np.einsum("kc,abkl->abcl", U, E)
-    E = np.einsum("ld,abcl->abcd", U, E)
-
-    # Apply selection rule
-    E *= allowed
-
-    # Back transform: SALC → AO  (contract each index with U^T, i.e. U since U is orthogonal)
-    E = np.einsum("ia,abcd->ibcd", U, E)
-    E = np.einsum("jb,ibcd->ijcd", U, E)
-    E = np.einsum("kc,ijcd->ijkd", U, E)
-    E = np.einsum("ld,ijkd->ijkl", U, E)
-
-    ERI[:] = E
-    return n_sym_skipped
-
-
 def compute_eri(
     bfs: list[BasisFunction],
     cs_tol: float = 1e-9,
-    U: np.ndarray | None = None,
-    sym_blocks: list | None = None,
 ) -> np.ndarray:
     """
     Compute the full (μν|λσ) ERI tensor.
@@ -350,9 +294,15 @@ def compute_eri(
       1. 8-fold permutation symmetry  (μν|λσ) = (νμ|λσ) = (μν|σλ) = (λσ|μν) ...
       2. Compound index restriction ij >= kl  -> unique quartets only
       3. Cauchy-Schwarz screening: |(μν|λσ)| <= sqrt(μν|μν) * sqrt(λσ|λσ)
-      4. SALC symmetry projection (when U and sym_blocks provided):
-         Transform to SALC basis, zero cross-irrep quartets, transform back.
-         Selection rule: (ãb̃|c̃d̃) = 0 unless Γ(ã)=Γ(b̃) AND Γ(c̃)=Γ(d̃).
+
+    No point-group screening is applied here.  A two-electron integral vanishes
+    only when Γ(a)⊗Γ(b)⊗Γ(c)⊗Γ(d) does not contain the totally symmetric irrep;
+    requiring Γ(a)=Γ(b) and Γ(c)=Γ(d) is a stricter — and incorrect — condition
+    that discards non-zero integrals such as (a₁b₁|a₁b₁).  Screening in the SALC
+    basis would save no work in any case, since the AO integrals must be
+    evaluated before they can be transformed.  Symmetry is still exploited where
+    it is exact and cheap: the Fock and overlap matrices *are* block-diagonal by
+    irrep, and are diagonalised block by block in run_rhf.
     """
     N = len(bfs)
 
@@ -395,16 +345,6 @@ def compute_eri(
         "ERI: %d computed, %d Cauchy-Schwarz screened",
         n_computed, n_screened,
     )
-
-    # Step 3: SALC symmetry projection (correct selection rule in irrep basis)
-    if U is not None and sym_blocks is not None and len(sym_blocks) > 1:
-        n_sym_skipped = _salc_symmetry_project(ERI, U, sym_blocks)
-        total = N ** 4
-        sym_pct = 100.0 * n_sym_skipped / total if total else 0.0
-        logger.info(
-            "ERI symmetry projection: %d / %d SALC quartets zeroed (%.1f%%)",
-            n_sym_skipped, total, sym_pct,
-        )
 
     return ERI
 
@@ -1027,7 +967,7 @@ def run_rhf(
 
     if N < _DIRECT_THRESHOLD:
         logger.info("Computing ERI tensor (N=%d < %d)...", N, _DIRECT_THRESHOLD)
-        ERI = compute_eri(bfs, U=U, sym_blocks=sym_blocks)
+        ERI = compute_eri(bfs)
     else:
         try:
             B_ri = _compute_ri_B_tensor(bfs, atoms_bohr, basis)
@@ -1039,13 +979,15 @@ def run_rhf(
 
     S_salc = U.T @ S @ U
     X_salc = np.zeros_like(S)
-    # Linear-dependency threshold: drop overlap eigenvectors with eigenvalue < 0.10.
-    # Split-valence basis sets (6-31G and similar) contain inner/outer contracted
-    # shell pairs that overlap at ~0.8, yielding small S eigenvalues (0.02–0.09).
-    # Keeping these with canonical S^{-1/2} amplifies them by up to 7–37×, driving
-    # the SCF into unphysical electronic states.  Dropping them limits Z_max to ~3,
-    # matching the condition seen in well-behaved basis sets (STO-3G, cc-pVDZ).
-    _lindep_thresh = 0.10
+    # Linear-dependency threshold: drop overlap eigenvectors below this eigenvalue.
+    # Only genuinely redundant directions should be removed — every dropped vector
+    # is variational freedom the basis no longer has, and the energy rises by the
+    # amount that direction was worth.  1e-6 is the usual cutoff; overlap
+    # eigenvalues of 1e-2 (routine in split-valence sets, whose inner/outer
+    # contracted shells overlap at ~0.8) are perfectly well conditioned and must
+    # be kept.  A large cutoff here was previously masking an unrelated bug in the
+    # Boys function; with that fixed, these blocks converge normally.
+    _lindep_thresh = 1e-6
     for b in sym_blocks:
         Sb = S_salc[np.ix_(b, b)]
         vb, wb = np.linalg.eigh(Sb)

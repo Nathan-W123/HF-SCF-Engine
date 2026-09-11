@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 venv/
 venv311/
+.venv/
 .env
 
 # Database (persisted on Railway volume, not in repo)

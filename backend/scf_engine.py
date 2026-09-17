@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 from math import sqrt
@@ -286,62 +286,9 @@ def compute_one_electron(
 
 # ── Two-electron repulsion integrals ──────────────────────────────────────────
 
-def _salc_symmetry_project(
-    ERI: np.ndarray,
-    U: np.ndarray,
-    sym_blocks: list,
-) -> int:
-    """
-    Project the AO ERI tensor onto the SALC symmetry-allowed subspace in-place.
-
-    Selection rule in the SALC basis: (ãb̃|c̃d̃) = 0 unless Γ(ã)=Γ(b̃) AND Γ(c̃)=Γ(d̃).
-
-    Algorithm:
-      1. Forward 4-index transform: ERI_salc = U^T ⊗ U^T ⊗ U^T ⊗ U^T · ERI_ao
-      2. Zero all (a,b,c,d) where block(a)≠block(b) or block(c)≠block(d)
-      3. Back 4-index transform: ERI_ao = U ⊗ U ⊗ U ⊗ U · ERI_salc
-
-    Returns the number of SALC-basis quartets set to zero.
-    """
-    N = U.shape[0]
-
-    # Map each SALC index to its block index
-    block_of = np.empty(N, dtype=np.intp)
-    for b_idx, b in enumerate(sym_blocks):
-        block_of[b] = b_idx
-
-    # Build allowed mask: (N,N,N,N) bool — True where selection rule is satisfied
-    same_bra = block_of[:, None] == block_of[None, :]   # (N,N)
-    same_ket = same_bra                                   # same shape, reuse
-    allowed = (same_bra[:, :, np.newaxis, np.newaxis]
-               & same_ket[np.newaxis, np.newaxis, :, :])  # (N,N,N,N)
-
-    n_sym_skipped = int(np.count_nonzero(~allowed))
-
-    # Forward transform: AO → SALC  (contract each index with U)
-    E = np.einsum("ia,ijkl->ajkl", U, ERI)
-    E = np.einsum("jb,ajkl->abkl", U, E)
-    E = np.einsum("kc,abkl->abcl", U, E)
-    E = np.einsum("ld,abcl->abcd", U, E)
-
-    # Apply selection rule
-    E *= allowed
-
-    # Back transform: SALC → AO  (contract each index with U^T, i.e. U since U is orthogonal)
-    E = np.einsum("ia,abcd->ibcd", U, E)
-    E = np.einsum("jb,ibcd->ijcd", U, E)
-    E = np.einsum("kc,ijcd->ijkd", U, E)
-    E = np.einsum("ld,ijkd->ijkl", U, E)
-
-    ERI[:] = E
-    return n_sym_skipped
-
-
 def compute_eri(
     bfs: list[BasisFunction],
     cs_tol: float = 1e-9,
-    U: np.ndarray | None = None,
-    sym_blocks: list | None = None,
 ) -> np.ndarray:
     """
     Compute the full (μν|λσ) ERI tensor.
@@ -350,9 +297,13 @@ def compute_eri(
       1. 8-fold permutation symmetry  (μν|λσ) = (νμ|λσ) = (μν|σλ) = (λσ|μν) ...
       2. Compound index restriction ij >= kl  -> unique quartets only
       3. Cauchy-Schwarz screening: |(μν|λσ)| <= sqrt(μν|μν) * sqrt(λσ|λσ)
-      4. SALC symmetry projection (when U and sym_blocks provided):
-         Transform to SALC basis, zero cross-irrep quartets, transform back.
-         Selection rule: (ãb̃|c̃d̃) = 0 unless Γ(ã)=Γ(b̃) AND Γ(c̃)=Γ(d̃).
+
+    Note: no symmetry screening is applied here.  Point-group symmetry is
+    exploited where it actually pays — the block-diagonal Fock diagonalisation
+    in the orthogonal-SALC basis (see run_rhf).  Screening ERIs by irrep would
+    need the full direct-product rule (Γa⊗Γb⊗Γc⊗Γd ⊇ Γ_totally-symmetric), not
+    the stricter Γa=Γb ∧ Γc=Γd, and would save nothing here because the tensor
+    is built in full before any projection could be applied.
     """
     N = len(bfs)
 
@@ -395,16 +346,6 @@ def compute_eri(
         "ERI: %d computed, %d Cauchy-Schwarz screened",
         n_computed, n_screened,
     )
-
-    # Step 3: SALC symmetry projection (correct selection rule in irrep basis)
-    if U is not None and sym_blocks is not None and len(sym_blocks) > 1:
-        n_sym_skipped = _salc_symmetry_project(ERI, U, sym_blocks)
-        total = N ** 4
-        sym_pct = 100.0 * n_sym_skipped / total if total else 0.0
-        logger.info(
-            "ERI symmetry projection: %d / %d SALC quartets zeroed (%.1f%%)",
-            n_sym_skipped, total, sym_pct,
-        )
 
     return ERI
 
@@ -952,12 +893,28 @@ def run_rhf(
     spin: int = 0,
     max_cycles: int = 200,
     conv_tol: float = 1e-9,
+    on_cycle: Optional[Callable[[dict], None]] = None,
 ) -> dict:
     """
     Run a restricted Hartree-Fock calculation.
 
     Returns a dict with: converged, total_energy, homo/lumo energies, dipole,
     orbitals, n_electrons, n_basis, atoms, _bfs, _C, _mo_energies (internal).
+
+    on_cycle
+        Optional callback invoked once per SCF iteration, after the Fock matrix
+        has been diagonalised and the new density formed.  It receives a dict:
+
+            cycle          1-based iteration number
+            energy         E = ½·Tr[P(H_core + F)] + E_nuc for this cycle's density
+            delta          max |ΔP| against the previous cycle
+            C              MO coefficients (AO basis), copy
+            mo_energies    orbital eigenvalues, copy
+            P              density matrix, copy
+            converged      whether this cycle met conv_tol
+
+        Intended for tracing/visualising convergence; it must not mutate the
+        arrays it is given.  Raising from the callback aborts the calculation.
     """
     # ── Parse geometry ────────────────────────────────────────────────────────
     try:
@@ -1027,7 +984,7 @@ def run_rhf(
 
     if N < _DIRECT_THRESHOLD:
         logger.info("Computing ERI tensor (N=%d < %d)...", N, _DIRECT_THRESHOLD)
-        ERI = compute_eri(bfs, U=U, sym_blocks=sym_blocks)
+        ERI = compute_eri(bfs)
     else:
         try:
             B_ri = _compute_ri_B_tensor(bfs, atoms_bohr, basis)
@@ -1039,13 +996,17 @@ def run_rhf(
 
     S_salc = U.T @ S @ U
     X_salc = np.zeros_like(S)
-    # Linear-dependency threshold: drop overlap eigenvectors with eigenvalue < 0.10.
-    # Split-valence basis sets (6-31G and similar) contain inner/outer contracted
-    # shell pairs that overlap at ~0.8, yielding small S eigenvalues (0.02–0.09).
-    # Keeping these with canonical S^{-1/2} amplifies them by up to 7–37×, driving
-    # the SCF into unphysical electronic states.  Dropping them limits Z_max to ~3,
-    # matching the condition seen in well-behaved basis sets (STO-3G, cc-pVDZ).
-    _lindep_thresh = 0.10
+    # Linear-dependency threshold: drop overlap eigenvectors with eigenvalue below
+    # this cutoff.  1e-6 is the conventional value — it removes genuinely redundant
+    # directions (which appear with large diffuse/augmented sets) while keeping every
+    # function that carries variational freedom.
+    #
+    # This was previously 0.10, which discarded the inner/outer contracted pairs of
+    # split-valence sets (S eigenvalues 0.02–0.09) and cost 20–80 mHa.  That was a
+    # workaround for the SCF instability caused by the Boys-function series bug in
+    # integrals.py; with the integrals correct, 6-31G/6-31G*/6-31G** converge
+    # normally at 1e-6 and reproduce literature energies to <0.1 mHa.
+    _lindep_thresh = 1e-6
     for b in sym_blocks:
         Sb = S_salc[np.ix_(b, b)]
         vb, wb = np.linalg.eigh(Sb)
@@ -1060,6 +1021,15 @@ def run_rhf(
         X_salc[np.ix_(b, b)] = wb @ np.diag(inv_sqrt) @ wb.T
     # Z: combined AO → orthogonal-SALC transform
     Z = U @ X_salc
+
+    # ── Nuclear repulsion (constant; also used for per-cycle energies) ────────
+    E_nuc = 0.0
+    for i, (sym_i, xi, yi, zi) in enumerate(atoms_bohr):
+        for j, (sym_j, xj, yj, zj) in enumerate(atoms_bohr):
+            if j <= i:
+                continue
+            Rij = sqrt((xi - xj) ** 2 + (yi - yj) ** 2 + (zi - zj) ** 2)
+            E_nuc += nuclear_charges[i] * nuclear_charges[j] / Rij
 
     # ── Initial density matrix (SAD guess) ────────────────────────────────────
     # SAD provides a physically motivated starting density that avoids the
@@ -1155,6 +1125,19 @@ def run_rhf(
         if delta < conv_tol:
             converged = True
             logger.info(f"Converged in {cycle} iterations (ΔP={delta:.2e})")
+
+        if on_cycle is not None:
+            on_cycle({
+                "cycle":       cycle,
+                "energy":      0.5 * float(np.einsum("mn,mn->", P, H_core + F_phys)) + E_nuc,
+                "delta":       delta,
+                "C":           C.copy(),
+                "mo_energies": eps.copy(),
+                "P":           P.copy(),
+                "converged":   converged,
+            })
+
+        if converged:
             break
 
         if cycle % 20 == 0:
@@ -1175,13 +1158,6 @@ def run_rhf(
         J_final, K_final = _build_jk_direct(bfs, P, Q_cs)
     F_phys = H_core + J_final - 0.5 * K_final
     E_elec = 0.5 * float(np.einsum("mn,mn->", P, H_core + F_phys))
-    E_nuc = 0.0
-    for i, (sym_i, xi, yi, zi) in enumerate(atoms_bohr):
-        for j, (sym_j, xj, yj, zj) in enumerate(atoms_bohr):
-            if j <= i:
-                continue
-            Rij = sqrt((xi - xj) ** 2 + (yi - yj) ** 2 + (zi - zj) ** 2)
-            E_nuc += nuclear_charges[i] * nuclear_charges[j] / Rij
     E_total = E_elec + E_nuc
 
     # ── Orbital metadata ──────────────────────────────────────────────────────

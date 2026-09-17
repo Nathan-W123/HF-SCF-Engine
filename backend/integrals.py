@@ -33,32 +33,58 @@ except ImportError:                         # pragma: no cover
     _HAS_NUMBA = False
 
 
-# ── Boys function (scalar — used by one-electron integrals) ───────────────────
+# ── Boys function ─────────────────────────────────────────────────────────────
+#
+# F_n(x) = ∫₀¹ t^{2n} exp(−x t²) dt
+#
+# Two evaluation branches, chosen so that the recurrence used is always the
+# stable one:
+#
+#   x > n/2   upward recurrence  F_{m+1} = [(2m+1) F_m − e^{−x}] / 2x
+#             seeded with F_0 = ½√(π/x) erf(√x).  Cheap, and stable when the
+#             2x divisor is not small compared with (2m+1).
+#
+#   x ≤ n/2   ascending series (Helgaker, Molecular Electronic-Structure
+#             Theory, eq. 9.8.12)
+#
+#                 F_n(x) = e^{−x} Σ_{i≥0} (2x)^i / (2n+2i+1)!!
+#
+#             for the *highest* order needed, then downward recurrence
+#             F_{m−1} = [2x F_m + e^{−x}] / (2m+1), which is unconditionally
+#             stable.  Every term of the series is positive, so there is no
+#             cancellation.
+#
+# The series must not be used with an alternating-sign expansion here: the
+# terms of Σ (−x)^k / (k! (2n+2k+1)) cancel badly and the recurrence factor is
+# easy to get wrong, which silently biases every nuclear-attraction and ERI
+# integral with x < 1 (i.e. most of them).
+
+_BOYS_SERIES_TERMS = 200   # ample: the loop breaks on convergence
+
 
 def boys(n: int, x: float) -> float:
-    """
-    Boys function F_n(x) = ∫₀¹ t^{2n} exp(−x t²) dt.
-
-    Taylor series for x < 1 (avoids cancellation in upward recurrence);
-    erf-based F_0 + upward recurrence for x ≥ 1.
-    """
-    if x < 1.0:
-        total = 0.0
-        term = 1.0 / (2 * n + 1)
-        for k in range(1, 25):
-            total += term
-            term *= -x / k / (2 * n + 2 * k + 1)
-            if abs(term) < 1e-15:
-                break
-        return total + term
-    f = sqrt(pi) / (2.0 * sqrt(x)) * erf(sqrt(x))
-    if n == 0:
+    """Boys function F_n(x) = ∫₀¹ t^{2n} exp(−x t²) dt."""
+    if x > 0.5 * n and x >= 1.0:
+        f = sqrt(pi) / (2.0 * sqrt(x)) * erf(sqrt(x))
+        if n == 0:
+            return f
+        ex = exp(-x)
+        inv2x = 0.5 / x
+        for m in range(n):
+            f = ((2 * m + 1) * f - ex) * inv2x
         return f
-    ex = exp(-x)
-    inv2x = 0.5 / x
-    for m in range(n):
-        f = ((2 * m + 1) * f - ex) * inv2x
-    return f
+
+    # Ascending series at order n (no downward recurrence needed for a scalar).
+    term  = 1.0 / (2 * n + 1)
+    total = term
+    denom = 2 * n + 1
+    for _ in range(_BOYS_SERIES_TERMS):
+        denom += 2
+        term  *= 2.0 * x / denom
+        total += term
+        if term < 1e-17 * total:
+            break
+    return exp(-x) * total
 
 
 # ── Numba-compiled core ───────────────────────────────────────────────────────
@@ -67,23 +93,28 @@ def boys(n: int, x: float) -> float:
 def _boys_array(n_max: int, x: float):
     """Compute F_0(x) … F_{n_max}(x) in one pass."""
     fn = np.zeros(n_max + 1)
-    if x < 1.0:
-        for n in range(n_max + 1):
-            total = 0.0
-            term = 1.0 / (2 * n + 1)
-            for k in range(1, 25):
-                total += term
-                term *= -x / k / (2 * n + 2 * k + 1)
-                if abs(term) < 1e-15:
-                    break
-            fn[n] = total + term
-    else:
+    ex = exp(-x)
+
+    if x > 0.5 * n_max and x >= 1.0:
         fn[0] = sqrt(pi) / (2.0 * sqrt(x)) * erf(sqrt(x))
-        if n_max > 0:
-            ex = exp(-x)
-            inv2x = 0.5 / x
-            for m in range(n_max):
-                fn[m + 1] = ((2 * m + 1) * fn[m] - ex) * inv2x
+        inv2x = 0.5 / x
+        for m in range(n_max):
+            fn[m + 1] = ((2 * m + 1) * fn[m] - ex) * inv2x
+        return fn
+
+    # Series at n_max, then downward recurrence (stable for small x).
+    term  = 1.0 / (2 * n_max + 1)
+    total = term
+    denom = 2 * n_max + 1
+    for _ in range(_BOYS_SERIES_TERMS):
+        denom += 2
+        term  *= 2.0 * x / denom
+        total += term
+        if term < 1e-17 * total:
+            break
+    fn[n_max] = ex * total
+    for m in range(n_max, 0, -1):
+        fn[m - 1] = (2.0 * x * fn[m] + ex) / (2 * m - 1)
     return fn
 
 

@@ -9,11 +9,11 @@ from real simulation output.
 
 | item | state |
 |---|---|
-| `make all` from scratch | clean, exit 0, **11.0 min** wall on 4 cores (18.5 min when another job was competing for the same cores) |
-| `pytest` | **97 test cases** (78 test functions, 8 files), **22 s** |
+| `make all` from scratch | clean, exit 0, **8.8–11.0 min** wall on 4 cores over three runs (18.5 min when another job was competing for the same cores) |
+| `pytest` | **97 test cases** (78 test functions, 8 files), **21 s** |
 | validation | **33 checks, all pass**, outputs in `validation/*.json` |
 | figures | 6 PNGs in `figures/` |
-| hero | `media/hero.png` 1920×1080, `media/hero.mp4` 1920×1080 / 30 fps / 22.0 s / 9.3 MB |
+| hero | `media/hero.png` 1920×1080, `media/hero.mp4` 1920×1080 / 30 fps / 22.0 s / 11.4 MB |
 | machine-readable results | `results/summary.json`, `results/sweep.json` |
 
 ## Headline result

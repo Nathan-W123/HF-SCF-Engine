@@ -288,9 +288,16 @@ class HeroScene:
                 if kind == 1:
                     c = np.clip(base * 0.85 + 0.35, 0, 1) * 255.0 * fog
                 else:
-                    lam = abs(float(nrm @ key))
+                    # Two-sided lighting: a facet whose outward normal faces
+                    # the key light is a lit upper surface, one facing away is
+                    # an underside and is rendered much darker.  That asymmetry
+                    # is what stops the glyphs reading as folded paper.
+                    lam = float(nrm @ key)
                     rim = (1.0 - abs(float(nrm @ view))) ** 2.5
-                    shade = 0.045 + 0.90 * lam ** 1.35 + 0.22 * rim
+                    if lam >= 0.0:
+                        shade = 0.050 + 0.95 * lam ** 1.35 + 0.22 * rim
+                    else:
+                        shade = 0.018 + 0.26 * (-lam) ** 1.6 + 0.10 * rim
                     c = np.clip(base * shade * albedo, 0, 1.0) * 255.0 * fog
                 dr.polygon([tuple(px[j]) for j in idx],
                            fill=tuple(int(v) for v in np.clip(c, 0, 255)))
@@ -323,11 +330,11 @@ class HeroScene:
 # =========================================================================
 # Camera path parameters (baked-in defaults; overridable from the CLI while
 # framing).  The shot is a slow orbit with a gentle dolly-in.
-CAM = dict(az0=20.0, az_sweep=26.0, elev0=26.0, elev_lift=5.0,
-           fov0=42.0, fov_zoom=3.0, frame=1.22, dolly=0.08,
-           rad_min=1500.0, rad_max=5200.0, focus_mix=0.55, focus_z=860.0,
-           roll0=50.0, roll_drift=-7.0, shift_r=-0.07, shift_u=-0.02,
-           span_min=2700.0, span_max=5000.0, clear=620.0)
+CAM = dict(az0=-13.0, az_sweep=26.0, elev0=26.0, elev_lift=5.0,
+           fov0=42.0, fov_zoom=3.0, frame=1.18, dolly=0.08,
+           rad_min=1200.0, rad_max=5200.0, focus_mix=1.0, focus_z=860.0,
+           roll0=58.0, roll_drift=-6.0, shift_r=0.0, shift_u=0.0,
+           span_min=1800.0, span_max=5000.0, clear=520.0)
 
 
 def camera_at(scene, u, k, cam=None):

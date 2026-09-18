@@ -44,7 +44,7 @@
       "separation_violation_samples": 0,
       "time_to_completion_s": null,
       "violating_pairs": 0,
-      "wall_time_s": 23.36047673225403,
+      "wall_time_s": 9.519799709320068,
       "wind": {
         "dryden": {
           "L_u": 200.0,
@@ -105,7 +105,7 @@
       "separation_violation_samples": 0,
       "time_to_completion_s": 328.70000000000005,
       "violating_pairs": 0,
-      "wall_time_s": 33.922527551651,
+      "wall_time_s": 17.67473077774048,
       "wind": {
         "dryden": {
           "L_u": 200.0,
@@ -166,7 +166,7 @@
       "separation_violation_samples": 0,
       "time_to_completion_s": 172.0,
       "violating_pairs": 0,
-      "wall_time_s": 23.888580083847046,
+      "wall_time_s": 9.525796890258789,
       "wind": {
         "dryden": {
           "L_u": 200.0,
@@ -227,7 +227,7 @@
       "separation_violation_samples": 0,
       "time_to_completion_s": 314.6,
       "violating_pairs": 0,
-      "wall_time_s": 33.586477756500244,
+      "wall_time_s": 17.02411961555481,
       "wind": {
         "dryden": {
           "L_u": 200.0,
@@ -256,7 +256,7 @@
     "total_zone_incursion_samples": 0,
     "worst_goal_completion": 1.0
   },
-  "total_wall_time_s": 660.5619814395905,
+  "total_wall_time_s": 526.8682265281677,
   "validation": {
     "collision_avoidance": {
       "all_passed": true,

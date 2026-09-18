@@ -7,7 +7,7 @@ build/
 dist/
 .DS_Store
 
-# Large regenerable artefacts
+# Large regenerable intermediates (summary.json / sweep.json ARE tracked, and
+# so are media/hero.png and media/hero.mp4 -- they are the deliverables)
 results/*.pkl
-media/*.mp4
 media/hero_thumb.png

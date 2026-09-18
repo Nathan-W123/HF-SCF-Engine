@@ -1,0 +1,134 @@
+{
+  "name": "tree_force_accuracy",
+  "passed": false,
+  "checks": [
+    {
+      "label": "median relative force error |da|/|a| at theta=0.7",
+      "value": "3.359e-03",
+      "threshold": "< 1.0e-2",
+      "passed": true
+    },
+    {
+      "label": "99th-percentile relative force error at theta=0.7",
+      "value": "3.166e-02",
+      "threshold": "< 5.0e-2",
+      "passed": true
+    },
+    {
+      "label": "median error decreases monotonically as theta decreases",
+      "value": "True",
+      "threshold": "True",
+      "passed": true
+    },
+    {
+      "label": "Barnes-Hut speed-up over direct O(N^2) at theta=0.7",
+      "value": "12.3x",
+      "threshold": "> 20x",
+      "passed": false
+    }
+  ],
+  "n_particles": 72000,
+  "n_sinks": 1024,
+  "a_rms_sink_sample": 9545.782738735774,
+  "leaf_size": 12,
+  "direct_full_step_s_extrapolated": 5.114088070303779,
+  "production_theta": 0.7,
+  "rows": [
+    {
+      "theta": 0.3,
+      "median_rel_err": 0.0004689917808437533,
+      "p90_rel_err": 0.0014001193889349912,
+      "p99_rel_err": 0.00591031077354619,
+      "max_rel_err": 0.015873368753620203,
+      "median_err_over_arms": 0.00028536334396999806,
+      "p99_err_over_arms": 0.013045692517056869,
+      "max_err_over_arms": 0.020031294527436985,
+      "tree_walk_s": 1.6175640520000343,
+      "speedup_vs_direct": 3.161598493722999
+    },
+    {
+      "theta": 0.4,
+      "median_rel_err": 0.0008983513032003611,
+      "p90_rel_err": 0.002773228384828306,
+      "p99_rel_err": 0.010128379419115338,
+      "max_rel_err": 0.01935054727675955,
+      "median_err_over_arms": 0.0005614320585162354,
+      "p99_err_over_arms": 0.023243941394539676,
+      "max_err_over_arms": 0.02950308211029237,
+      "tree_walk_s": 1.1639501806665369,
+      "speedup_vs_direct": 4.3937345044915865
+    },
+    {
+      "theta": 0.5,
+      "median_rel_err": 0.0015091601764008638,
+      "p90_rel_err": 0.00451587405138457,
+      "p99_rel_err": 0.01866289049736565,
+      "max_rel_err": 0.04983775415455841,
+      "median_err_over_arms": 0.0009580986399110971,
+      "p99_err_over_arms": 0.03694155947255873,
+      "max_err_over_arms": 0.04782191569484769,
+      "tree_walk_s": 0.7626222036666755,
+      "speedup_vs_direct": 6.705926008599441
+    },
+    {
+      "theta": 0.6,
+      "median_rel_err": 0.0022846143141634478,
+      "p90_rel_err": 0.006547983656941696,
+      "p99_rel_err": 0.02284626837114998,
+      "max_rel_err": 0.03954210091024866,
+      "median_err_over_arms": 0.0014987194432447477,
+      "p99_err_over_arms": 0.04527515907664104,
+      "max_err_over_arms": 0.05995981145862721,
+      "tree_walk_s": 0.5138575519999904,
+      "speedup_vs_direct": 9.952345840591782
+    },
+    {
+      "theta": 0.7,
+      "median_rel_err": 0.003358766963914714,
+      "p90_rel_err": 0.008891427248246453,
+      "p99_rel_err": 0.031661877161975015,
+      "max_rel_err": 0.10586209566497462,
+      "median_err_over_arms": 0.002186168449934956,
+      "p99_err_over_arms": 0.053732012633227334,
+      "max_err_over_arms": 0.0788604877210186,
+      "tree_walk_s": 0.41525270366658634,
+      "speedup_vs_direct": 12.315604510572845
+    },
+    {
+      "theta": 0.8,
+      "median_rel_err": 0.00439273744357329,
+      "p90_rel_err": 0.011721591052953326,
+      "p99_rel_err": 0.03438332976468486,
+      "max_rel_err": 0.1364754951992305,
+      "median_err_over_arms": 0.0027654753041403872,
+      "p99_err_over_arms": 0.06469666701653037,
+      "max_err_over_arms": 0.0932997252228597,
+      "tree_walk_s": 0.27999659166668306,
+      "speedup_vs_direct": 18.264822581811117
+    },
+    {
+      "theta": 0.9,
+      "median_rel_err": 0.005622068800214022,
+      "p90_rel_err": 0.015566222758634587,
+      "p99_rel_err": 0.0447458317272576,
+      "max_rel_err": 0.2711764642136315,
+      "median_err_over_arms": 0.0034208058555263684,
+      "p99_err_over_arms": 0.07304615095759241,
+      "max_err_over_arms": 0.09230961091902129,
+      "tree_walk_s": 0.22321662466674752,
+      "speedup_vs_direct": 22.91087448320162
+    },
+    {
+      "theta": 1.0,
+      "median_rel_err": 0.007357902048278837,
+      "p90_rel_err": 0.020305712473112268,
+      "p99_rel_err": 0.050237356291105255,
+      "max_rel_err": 0.3917519477800974,
+      "median_err_over_arms": 0.00453371002323861,
+      "p99_err_over_arms": 0.07399999319044522,
+      "max_err_over_arms": 0.12721548628420487,
+      "tree_walk_s": 0.18075212533328036,
+      "speedup_vs_direct": 28.293377247289083
+    }
+  ]
+}

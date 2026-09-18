@@ -1,0 +1,21 @@
+{
+  "all_passed": true,
+  "checks": {
+    "matches_stored_reference_within_1e-9": true,
+    "same_process_reruns_bit_identical": true
+  },
+  "decimation": 20,
+  "description": "Fixed-seed trajectory signature reproducibility.",
+  "max_abs_deviation_from_reference": 0.0,
+  "name": "deterministic_regression",
+  "reference_created_this_run": true,
+  "reference_hash_matches": true,
+  "reference_sha256": "a4723a4bfb9bd031a8e5cea0c406267ae1482444358f88bedb4209f0fa9d7c92",
+  "scenario": "swap(n=16, seed=20240607, t_max=120 s, Dryden on)",
+  "signature_sha256": "a4723a4bfb9bd031a8e5cea0c406267ae1482444358f88bedb4209f0fa9d7c92",
+  "signature_shape": [
+    60,
+    16,
+    7
+  ]
+}

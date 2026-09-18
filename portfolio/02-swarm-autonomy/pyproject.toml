@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "swarmsim"
+version = "1.0.0"
+description = "Decentralised fixed-wing swarm simulation: 3-DOF dynamics, Dryden turbulence, L1 guidance, 3-D ORCA + CBF collision avoidance"
+requires-python = ">=3.11"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q --durations=8"
+filterwarnings = ["error::RuntimeWarning"]

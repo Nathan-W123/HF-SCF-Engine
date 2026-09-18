@@ -1,0 +1,131 @@
+{
+  "name": "Validation 1: vacuum orbital energy, angular momentum and period",
+  "description": "Validation 1 -- vacuum orbital behaviour.\n\nWith the atmosphere switched off the 3-DOF flight equations must reduce to pure\nKeplerian motion.  Three independent things are checked:\n\nA. **Circular orbit, non-rotating Earth.**  Specific orbital energy\n   ``E = V^2/2 - mu/r`` and specific angular momentum ``|r x v|`` must be\n   conserved, and the radius must not drift.\nB. **Period.**  Propagating for exactly one Keplerian period\n   ``T = 2 pi sqrt(a^3/mu)`` must return the vehicle to its starting point; the\n   closure error is reported as a distance.\nC. **Rotating Earth.**  With ``omega = OMEGA_EARTH`` the equations acquire\n   Coriolis and centrifugal terms.  An inclined, eccentric orbit is used so that\n   no term is accidentally zero, and three things are required: the *inertial*\n   energy and angular momentum must be conserved, the orbit-plane normal must\n   not drift, and -- the decisive test -- the whole trajectory must agree with a\n   completely independent inertial Cartesian two-body propagation started from\n   the same converted initial state.  The Cartesian propagator shares no code\n   with the flight equations, so any sign error in a Coriolis or centrifugal\n   term shows up immediately as a position divergence.\n",
+  "passed": true,
+  "checks": [
+    {
+      "name": "A. circular: |dE/E| drift over 3 periods",
+      "value": 7.59375192771368e-16,
+      "threshold": 1e-11,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "A. circular: |dh/h| drift over 3 periods",
+      "value": 2.9371408573518927e-16,
+      "threshold": 1e-11,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "A. circular: radius drift |dr|",
+      "value": 0.0,
+      "threshold": 0.001,
+      "comparison": "<",
+      "units": "m",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "A. circular: |a - r0| semi-major axis error",
+      "value": 5.587935447692871e-09,
+      "threshold": 0.001,
+      "comparison": "<",
+      "units": "m",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "B. period closure error after 2*pi*sqrt(a^3/mu)",
+      "value": 1.0919992857564472e-08,
+      "threshold": 1.0,
+      "comparison": "<",
+      "units": "m",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "B. period closure / circumference",
+      "value": 2.566786060861877e-16,
+      "threshold": 1e-08,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "C. rotating: inertial |dE/E| drift",
+      "value": 7.878743275454963e-13,
+      "threshold": 1e-10,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "C. rotating: inertial |dh/h| drift",
+      "value": 5.644108006221347e-13,
+      "threshold": 1e-10,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "C. rotating: orbit-plane normal drift",
+      "value": 7.0211497144051654e-12,
+      "threshold": 1e-09,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "C. rotating: max |dr| vs inertial Cartesian 2-body",
+      "value": 4.1057298773642826e-05,
+      "threshold": 0.01,
+      "comparison": "<",
+      "units": "m",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "C. rotating: max |dv| vs inertial Cartesian 2-body",
+      "value": 4.3927448920015176e-08,
+      "threshold": 1e-05,
+      "comparison": "<",
+      "units": "m/s",
+      "note": "",
+      "passed": true
+    }
+  ],
+  "data": {
+    "circular_orbit": {
+      "altitude_km": 400.0,
+      "v_circular_m_s": 7672.598648385013,
+      "kepler_period_s": 5544.855095980792,
+      "period_closure_error_m": 1.0919992857564472e-08,
+      "energy_drift_rel": 7.59375192771368e-16,
+      "angular_momentum_drift_rel": 2.9371408573518927e-16,
+      "specific_energy_J_per_kg": -29434385.009599764
+    },
+    "rotating_orbit": {
+      "omega_rad_s": 7.292115e-05,
+      "altitude0_km": 500.0,
+      "relative_speed_m_s": 7600.0,
+      "gamma0_deg": 6.0,
+      "inclination_deg": 50.4775330244275,
+      "semi_major_axis_km": 7455.019846639017,
+      "inertial_energy_drift_rel": 7.878743275454963e-13,
+      "inertial_h_drift_rel": 5.644108006221347e-13,
+      "orbit_plane_normal_drift": 7.0211497144051654e-12,
+      "max_position_error_vs_cartesian_2body_m": 4.1057298773642826e-05,
+      "max_velocity_error_vs_cartesian_2body_m_s": 4.3927448920015176e-08,
+      "propagation_time_s": 3000.0
+    }
+  }
+}

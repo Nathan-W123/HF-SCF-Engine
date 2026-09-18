@@ -1,0 +1,265 @@
+{
+  "all_passed": true,
+  "checks": {
+    "accel_within_limit": true,
+    "airspeed_within_limit": true,
+    "bank_within_limit": true,
+    "gamma_rate_within_limit": true,
+    "rk4_order_between_3.7_and_4.3": true,
+    "roll_rate_within_limit": true,
+    "turn_radius_matches_analytic_rel_err_lt_1e-6": true
+  },
+  "convergence": {
+    "dt_s": [
+      0.03125,
+      0.015625,
+      0.0078125,
+      0.00390625
+    ],
+    "error_ratio_per_halving": [
+      16.61046633411978,
+      16.289318098109597,
+      16.314208755585025
+    ],
+    "measured_order": 4.034965057874487,
+    "position_error_m": [
+      1.9387951404404084e-07,
+      1.167212949619544e-08,
+      7.16551142650349e-10,
+      4.3921905952383016e-11
+    ],
+    "reference_dt_s": 0.00048828125
+  },
+  "description": "Coordinated-turn radius, envelope limits, RK4 order.",
+  "limits": {
+    "V_min_flown": 32.99999999999983,
+    "abs_phi_max_deg": 45.0,
+    "limit_accel_max": 2.0,
+    "limit_gamma_dot_deg_s": 8.0,
+    "limit_p_max_deg_s": 59.99999999999999,
+    "limit_phi_deg": 45.0,
+    "max_dV_dt": 1.9999999999999574,
+    "max_dgamma_dt_deg_s": 8.00000000000002,
+    "max_dphi_dt_deg_s": 60.000000000000085
+  },
+  "name": "vehicle_dynamics",
+  "turn_radius_cases": [
+    {
+      "R_analytic_m": 187.3723758425291,
+      "R_measured_m": 187.37237584250562,
+      "V_mps": 18.0,
+      "circle_fit_rms_m": 9.707801682261195e-11,
+      "phi_deg": 10.0,
+      "rel_error": 1.2529238573162788e-13
+    },
+    {
+      "R_analytic_m": 90.77337152883989,
+      "R_measured_m": 90.77337152884733,
+      "V_mps": 18.0,
+      "circle_fit_rms_m": 5.401467519299468e-12,
+      "phi_deg": 20.0,
+      "rel_error": 8.203383597358178e-14
+    },
+    {
+      "R_analytic_m": 57.224889401815744,
+      "R_measured_m": 57.224889401820164,
+      "V_mps": 18.0,
+      "circle_fit_rms_m": 6.543824546713589e-12,
+      "phi_deg": 30.0,
+      "rel_error": 7.723170569006971e-14
+    },
+    {
+      "R_analytic_m": 39.374114911873484,
+      "R_measured_m": 39.374114911880206,
+      "V_mps": 18.0,
+      "circle_fit_rms_m": 3.6636716972853277e-14,
+      "phi_deg": 40.0,
+      "rel_error": 1.7071454927520342e-13
+    },
+    {
+      "R_analytic_m": 33.03880530048488,
+      "R_measured_m": 33.03880530049441,
+      "V_mps": 18.0,
+      "circle_fit_rms_m": 2.1537370434330575e-12,
+      "phi_deg": 45.0,
+      "rel_error": 2.883995955629517e-13
+    },
+    {
+      "R_analytic_m": 279.90194415982745,
+      "R_measured_m": 279.90194415992835,
+      "V_mps": 22.0,
+      "circle_fit_rms_m": 1.6482352505820293e-10,
+      "phi_deg": 10.0,
+      "rel_error": 3.6047291054298916e-13
+    },
+    {
+      "R_analytic_m": 135.59972783937812,
+      "R_measured_m": 135.599727839356,
+      "V_mps": 22.0,
+      "circle_fit_rms_m": 4.146918450716903e-11,
+      "phi_deg": 20.0,
+      "rel_error": 1.6306883715169945e-13
+    },
+    {
+      "R_analytic_m": 85.48409404468771,
+      "R_measured_m": 85.48409404468292,
+      "V_mps": 22.0,
+      "circle_fit_rms_m": 3.790322404262973e-12,
+      "phi_deg": 30.0,
+      "rel_error": 5.602279690207098e-14
+    },
+    {
+      "R_analytic_m": 58.818122275761624,
+      "R_measured_m": 58.818122275766704,
+      "V_mps": 22.0,
+      "circle_fit_rms_m": 1.0437866339094585e-13,
+      "phi_deg": 40.0,
+      "rel_error": 8.637440918065981e-14
+    },
+    {
+      "R_analytic_m": 49.35426470813174,
+      "R_measured_m": 49.35426470813785,
+      "V_mps": 22.0,
+      "circle_fit_rms_m": 3.5764459429803036e-12,
+      "phi_deg": 45.0,
+      "rel_error": 1.2381235063826312e-13
+    },
+    {
+      "R_analytic_m": 361.4436262394466,
+      "R_measured_m": 361.44362623959853,
+      "V_mps": 25.0,
+      "circle_fit_rms_m": 2.4268446501595054e-10,
+      "phi_deg": 10.0,
+      "rel_error": 4.2037664405868393e-13
+    },
+    {
+      "R_analytic_m": 175.10295433803992,
+      "R_measured_m": 175.10295433801463,
+      "V_mps": 25.0,
+      "circle_fit_rms_m": 6.084429406483585e-11,
+      "phi_deg": 20.0,
+      "rel_error": 1.4445970651201247e-13
+    },
+    {
+      "R_analytic_m": 110.38751813621863,
+      "R_measured_m": 110.38751813621913,
+      "V_mps": 25.0,
+      "circle_fit_rms_m": 9.10498484171137e-14,
+      "phi_deg": 30.0,
+      "rel_error": 4.505762276657958e-15
+    },
+    {
+      "R_analytic_m": 75.95315376518805,
+      "R_measured_m": 75.95315376518892,
+      "V_mps": 25.0,
+      "circle_fit_rms_m": 8.192061747974622e-12,
+      "phi_deg": 40.0,
+      "rel_error": 1.1413115778013092e-14
+    },
+    {
+      "R_analytic_m": 63.73226331112053,
+      "R_measured_m": 63.73226331112228,
+      "V_mps": 25.0,
+      "circle_fit_rms_m": 7.7257080920467e-12,
+      "phi_deg": 45.0,
+      "rel_error": 2.7426220867710063e-14
+    },
+    {
+      "R_analytic_m": 520.478821784803,
+      "R_measured_m": 520.4788217849066,
+      "V_mps": 30.0,
+      "circle_fit_rms_m": 1.033319767982412e-10,
+      "phi_deg": 10.0,
+      "rel_error": 1.9898736476777087e-13
+    },
+    {
+      "R_analytic_m": 252.14825424677747,
+      "R_measured_m": 252.14825424676323,
+      "V_mps": 30.0,
+      "circle_fit_rms_m": 5.835814053386166e-13,
+      "phi_deg": 20.0,
+      "rel_error": 5.647184219921836e-14
+    },
+    {
+      "R_analytic_m": 158.95802611615483,
+      "R_measured_m": 158.95802611614485,
+      "V_mps": 30.0,
+      "circle_fit_rms_m": 9.448218831360979e-12,
+      "phi_deg": 30.0,
+      "rel_error": 6.2758831710593e-14
+    },
+    {
+      "R_analytic_m": 109.37254142187079,
+      "R_measured_m": 109.37254142187508,
+      "V_mps": 30.0,
+      "circle_fit_rms_m": 1.1644149960100565e-12,
+      "phi_deg": 40.0,
+      "rel_error": 3.923908202367889e-14
+    },
+    {
+      "R_analytic_m": 91.77445916801356,
+      "R_measured_m": 91.77445916800906,
+      "V_mps": 30.0,
+      "circle_fit_rms_m": 1.3066261937528464e-11,
+      "phi_deg": 45.0,
+      "rel_error": 4.9085998278365464e-14
+    },
+    {
+      "R_analytic_m": 668.5261310924803,
+      "R_measured_m": 668.5261310927784,
+      "V_mps": 34.0,
+      "circle_fit_rms_m": 7.711922801599746e-10,
+      "phi_deg": 10.0,
+      "rel_error": 4.458866671658067e-13
+    },
+    {
+      "R_analytic_m": 323.8704243436386,
+      "R_measured_m": 323.8704243436686,
+      "V_mps": 34.0,
+      "circle_fit_rms_m": 7.724338221332185e-13,
+      "phi_deg": 20.0,
+      "rel_error": 9.267078097462019e-14
+    },
+    {
+      "R_analytic_m": 204.17275354474998,
+      "R_measured_m": 204.1727535447214,
+      "V_mps": 34.0,
+      "circle_fit_rms_m": 8.348095535418134e-11,
+      "phi_deg": 30.0,
+      "rel_error": 1.4003944792133916e-13
+    },
+    {
+      "R_analytic_m": 140.4829532040918,
+      "R_measured_m": 140.48295320407925,
+      "V_mps": 34.0,
+      "circle_fit_rms_m": 2.8758641925897992e-11,
+      "phi_deg": 40.0,
+      "rel_error": 8.942291773997721e-14
+    },
+    {
+      "R_analytic_m": 117.87919422024854,
+      "R_measured_m": 117.87919422025583,
+      "V_mps": 34.0,
+      "circle_fit_rms_m": 8.508463771891871e-13,
+      "phi_deg": 45.0,
+      "rel_error": 6.184440364664767e-14
+    }
+  ],
+  "turn_radius_worst_rel_error": 4.458866671658067e-13,
+  "vehicle_params": {
+    "V_max": 34.0,
+    "V_min": 18.0,
+    "V_nom": 25.0,
+    "accel_max": 2.0,
+    "gamma_dot_max": 0.13962634015954636,
+    "gamma_max": 0.20943951023931956,
+    "load_factor_max": 1.6,
+    "p_max": 1.0471975511965976,
+    "phi_limit_deg": 45.0,
+    "phi_max": 0.7853981633974483,
+    "tau_V": 2.5,
+    "tau_gamma": 1.2,
+    "tau_phi": 0.35,
+    "turn_radius_min_m": 63.73226331112053
+  }
+}

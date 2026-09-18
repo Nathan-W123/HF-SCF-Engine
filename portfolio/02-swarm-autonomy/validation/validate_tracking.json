@@ -1,0 +1,119 @@
+{
+  "L1_distance_at_cruise_m": 300.0,
+  "all_passed": true,
+  "checks": {
+    "circle_all_releases_settle": true,
+    "circle_steady_state_xte_lt_6m": true,
+    "no_divergence": true,
+    "straight_all_releases_settle": true,
+    "straight_steady_state_xte_lt_2m": true
+  },
+  "circle": [
+    {
+      "max_abs_xte_m": 399.99936130785335,
+      "offset_m": -400.0,
+      "overshoot_m": 25.520658756566718,
+      "settling_band_m": 20.0,
+      "settling_distance_m": 1005.4998722183694,
+      "steady_state_xte_m": 1.7581535010707045e-08
+    },
+    {
+      "max_abs_xte_m": 199.99968041749867,
+      "offset_m": -200.0,
+      "overshoot_m": 10.741768410593409,
+      "settling_band_m": 10.0,
+      "settling_distance_m": 947.9999508597964,
+      "steady_state_xte_m": 7.569332395544269e-09
+    },
+    {
+      "max_abs_xte_m": 59.99976956137289,
+      "offset_m": -60.0,
+      "overshoot_m": 3.11453520145767,
+      "settling_band_m": 5.0,
+      "settling_distance_m": 537.9999836335545,
+      "steady_state_xte_m": 2.2135449987493217e-09
+    },
+    {
+      "max_abs_xte_m": 60.04837475399245,
+      "offset_m": 60.0,
+      "overshoot_m": 3.126897793335047,
+      "settling_band_m": 5.0,
+      "settling_distance_m": 572.9999821016985,
+      "steady_state_xte_m": 2.241073724014551e-09
+    },
+    {
+      "max_abs_xte_m": 200.0053229667103,
+      "offset_m": 200.0,
+      "overshoot_m": 10.904747260348358,
+      "settling_band_m": 10.0,
+      "settling_distance_m": 995.4999647475407,
+      "steady_state_xte_m": 7.819123134121812e-09
+    },
+    {
+      "max_abs_xte_m": 400.00160293028125,
+      "offset_m": 400.0,
+      "overshoot_m": 26.780643451650803,
+      "settling_band_m": 20.0,
+      "settling_distance_m": 1075.499920177277,
+      "steady_state_xte_m": 1.9174624893863113e-08
+    }
+  ],
+  "circle_radius_m": 600.0,
+  "description": "L1 guidance capture of straight and circular paths.",
+  "min_turn_radius_m": 63.73226331112053,
+  "name": "tracking_convergence",
+  "straight": [
+    {
+      "max_abs_xte_m": 399.99998630683297,
+      "offset_m": -400.0,
+      "overshoot_m": 22.890225552644296,
+      "settling_band_m": 20.0,
+      "settling_distance_m": 1010.4999149531043,
+      "steady_state_xte_m": 5.346700392909197e-09
+    },
+    {
+      "max_abs_xte_m": 199.9999898352175,
+      "offset_m": -200.0,
+      "overshoot_m": 9.128584307639157,
+      "settling_band_m": 10.0,
+      "settling_distance_m": 602.9999833658078,
+      "steady_state_xte_m": 2.2517392475124294e-09
+    },
+    {
+      "max_abs_xte_m": 59.99999687824199,
+      "offset_m": -60.0,
+      "overshoot_m": 2.609652557654783,
+      "settling_band_m": 5.0,
+      "settling_distance_m": 570.4999986501783,
+      "steady_state_xte_m": 6.675924939666954e-10
+    },
+    {
+      "max_abs_xte_m": 59.99999687824199,
+      "offset_m": 60.0,
+      "overshoot_m": 2.609652557654783,
+      "settling_band_m": 5.0,
+      "settling_distance_m": 570.4999986501783,
+      "steady_state_xte_m": 6.675924939666954e-10
+    },
+    {
+      "max_abs_xte_m": 199.9999898352175,
+      "offset_m": 200.0,
+      "overshoot_m": 9.128584307639157,
+      "settling_band_m": 10.0,
+      "settling_distance_m": 602.9999833658078,
+      "steady_state_xte_m": 2.2517392475124294e-09
+    },
+    {
+      "max_abs_xte_m": 399.99998630683297,
+      "offset_m": 400.0,
+      "overshoot_m": 22.89022555264431,
+      "settling_band_m": 20.0,
+      "settling_distance_m": 1010.4999149531042,
+      "steady_state_xte_m": 5.346698713500967e-09
+    }
+  ],
+  "worst_circle_settling_distance_m": 1075.499920177277,
+  "worst_circle_steady_state_xte_m": 1.9174624893863113e-08,
+  "worst_straight_settling_distance_m": 1010.4999149531043,
+  "worst_straight_steady_state_xte_m": 5.346700392909197e-09
+}

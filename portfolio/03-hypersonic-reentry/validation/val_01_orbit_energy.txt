@@ -1,0 +1,36 @@
+========================================================================================
+Validation 1: vacuum orbital energy, angular momentum and period  --  PASS
+Validation 1 -- vacuum orbital behaviour.
+
+With the atmosphere switched off the 3-DOF flight equations must reduce to pure
+Keplerian motion.  Three independent things are checked:
+
+A. **Circular orbit, non-rotating Earth.**  Specific orbital energy
+   ``E = V^2/2 - mu/r`` and specific angular momentum ``|r x v|`` must be
+   conserved, and the radius must not drift.
+B. **Period.**  Propagating for exactly one Keplerian period
+   ``T = 2 pi sqrt(a^3/mu)`` must return the vehicle to its starting point; the
+   closure error is reported as a distance.
+C. **Rotating Earth.**  With ``omega = OMEGA_EARTH`` the equations acquire
+   Coriolis and centrifugal terms.  An inclined, eccentric orbit is used so that
+   no term is accidentally zero, and three things are required: the *inertial*
+   energy and angular momentum must be conserved, the orbit-plane normal must
+   not drift, and -- the decisive test -- the whole trajectory must agree with a
+   completely independent inertial Cartesian two-body propagation started from
+   the same converted initial state.  The Cartesian propagator shares no code
+   with the flight equations, so any sign error in a Coriolis or centrifugal
+   term shows up immediately as a position divergence.
+----------------------------------------------------------------------------------------
+check                                                        value       threshold  
+A. circular: |dE/E| drift over 3 periods               7.59375e-16    <      1e-11             ok 
+A. circular: |dh/h| drift over 3 periods               2.93714e-16    <      1e-11             ok 
+A. circular: radius drift |dr|                                   0    <      0.001  m          ok 
+A. circular: |a - r0| semi-major axis error            5.58794e-09    <      0.001  m          ok 
+B. period closure error after 2*pi*sqrt(a^3/mu)          1.092e-08    <          1  m          ok 
+B. period closure / circumference                      2.56679e-16    <      1e-08             ok 
+C. rotating: inertial |dE/E| drift                     7.87874e-13    <      1e-10             ok 
+C. rotating: inertial |dh/h| drift                     5.64411e-13    <      1e-10             ok 
+C. rotating: orbit-plane normal drift                  7.02115e-12    <      1e-09             ok 
+C. rotating: max |dr| vs inertial Cartesian 2-body     4.10573e-05    <       0.01  m          ok 
+C. rotating: max |dv| vs inertial Cartesian 2-body     4.39274e-08    <      1e-05  m/s        ok 
+========================================================================================

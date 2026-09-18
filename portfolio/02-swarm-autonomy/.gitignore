@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+.DS_Store
+
+# Large regenerable artefacts
+results/*.pkl
+media/*.mp4
+media/hero_thumb.png

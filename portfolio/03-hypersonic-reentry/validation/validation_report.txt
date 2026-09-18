@@ -1,0 +1,189 @@
+========================================================================================
+Validation 1: vacuum orbital energy, angular momentum and period  --  PASS
+Validation 1 -- vacuum orbital behaviour.
+
+With the atmosphere switched off the 3-DOF flight equations must reduce to pure
+Keplerian motion.  Three independent things are checked:
+
+A. **Circular orbit, non-rotating Earth.**  Specific orbital energy
+   ``E = V^2/2 - mu/r`` and specific angular momentum ``|r x v|`` must be
+   conserved, and the radius must not drift.
+B. **Period.**  Propagating for exactly one Keplerian period
+   ``T = 2 pi sqrt(a^3/mu)`` must return the vehicle to its starting point; the
+   closure error is reported as a distance.
+C. **Rotating Earth.**  With ``omega = OMEGA_EARTH`` the equations acquire
+   Coriolis and centrifugal terms.  An inclined, eccentric orbit is used so that
+   no term is accidentally zero, and three things are required: the *inertial*
+   energy and angular momentum must be conserved, the orbit-plane normal must
+   not drift, and -- the decisive test -- the whole trajectory must agree with a
+   completely independent inertial Cartesian two-body propagation started from
+   the same converted initial state.  The Cartesian propagator shares no code
+   with the flight equations, so any sign error in a Coriolis or centrifugal
+   term shows up immediately as a position divergence.
+----------------------------------------------------------------------------------------
+check                                                        value       threshold  
+A. circular: |dE/E| drift over 3 periods               7.59375e-16    <      1e-11             ok 
+A. circular: |dh/h| drift over 3 periods               2.93714e-16    <      1e-11             ok 
+A. circular: radius drift |dr|                                   0    <      0.001  m          ok 
+A. circular: |a - r0| semi-major axis error            5.58794e-09    <      0.001  m          ok 
+B. period closure error after 2*pi*sqrt(a^3/mu)          1.092e-08    <          1  m          ok 
+B. period closure / circumference                      2.56679e-16    <      1e-08             ok 
+C. rotating: inertial |dE/E| drift                     7.87874e-13    <      1e-10             ok 
+C. rotating: inertial |dh/h| drift                     5.64411e-13    <      1e-10             ok 
+C. rotating: orbit-plane normal drift                  7.02115e-12    <      1e-09             ok 
+C. rotating: max |dr| vs inertial Cartesian 2-body     4.10573e-05    <       0.01  m          ok 
+C. rotating: max |dv| vs inertial Cartesian 2-body     4.39274e-08    <      1e-05  m/s        ok 
+========================================================================================
+
+========================================================================================
+Validation 2: Allen-Eggers closed-form ballistic entry benchmark  --  PASS
+Validation 2 -- Allen-Eggers closed-form ballistic entry.
+
+The Allen-Eggers solution (NACA Report 1381, 1958) is the classical closed form
+for ballistic entry into an exponential atmosphere, and it is the strongest
+quantitative benchmark available to a reentry simulator because the peak
+deceleration
+
+    a_max = V_e^2 |sin gamma_e| / (2 e H)
+
+depends on *nothing* but entry speed, entry flight-path angle and the
+atmospheric scale height -- not on mass, area or drag coefficient.  The altitude
+at which it occurs,
+
+    z(a_max) = H ln( rho_0 H / (beta |sin gamma_e|) ),    beta = m/(C_D A),
+
+does depend on the ballistic coefficient but not on the entry speed.
+
+Anchoring.  Allen-Eggers is written for a vehicle arriving from *infinity* with
+speed ``V_e``.  The simulator starts at a finite 120 km, where the exponential
+atmosphere has already removed a fraction ``K exp(-z_0/H) ~ 3e-6`` of the speed.
+The analytic solution is therefore anchored by inverting the closed form at the
+simulator's initial state, ``V_e = V_0 exp(+K exp(-z_0/H))``, so that the two
+solutions share the same initial condition exactly.  This removes a 3e-6 offset
+that is a finite-entry-altitude artefact, not a physics difference.
+
+Three configurations isolate the three Allen-Eggers assumptions:
+
+**A. Exact limit.**  Exponential atmosphere, constant ``C_D``, no lift, gravity
+off, no curvature term, flight-path angle frozen.  Here the simulator's ODE *is*
+the Allen-Eggers ODE, so agreement must be at integrator precision.  This
+validates the closed-form implementation and the integrator together.
+
+**B. Constant-gamma assumption released.**  Gravity still off, but the spherical
+geometry, the ``V^2/r`` curvature term and a freely evolving flight-path angle
+are restored.  The only remaining difference from Allen-Eggers is that gamma is
+no longer constant, so the error must vanish identically as the entry becomes
+vertical (where there is nothing to turn) and grow as the entry becomes shallow.
+
+**C. Full physics.**  Inverse-square gravity restored as well.  The residual
+error no longer vanishes at vertical entry: gravity does work on the vehicle
+between the entry interface and the peak-deceleration altitude, which
+Allen-Eggers ignores.  The test asserts that the residual is *quantitatively
+explained* by that work, ``2 g_bar (z_0 - z_peak) / V_e^2``.
+----------------------------------------------------------------------------------------
+check                                                        value       threshold  
+A. exact limit: peak deceleration rel. error           2.54363e-09    <      1e-06             ok 
+A. exact limit: peak-altitude rel. error               6.24135e-08    <      1e-06             ok 
+A. exact limit: V at analytic peak rel. error          6.80971e-10    <      1e-06             ok 
+A. exact limit: max |a_sim - a_AE| / a_max over profile   5.11344e-11    <      1e-08             ok 
+B. gravity off, gamma=-90 deg: |a_max| rel. error      1.55861e-12    <      1e-06             ok 
+B. gravity off, gamma=-45 deg: |a_max| rel. error        0.0127871    <       0.02             ok 
+B. |error| decreases monotonically with steepness                1    >        0.5             ok 
+C. full physics, gamma <= -30 deg: worst |a_max| rel. error      0.049025    <       0.06             ok 
+C. full physics, gamma <= -30 deg: worst |z_peak| error      0.161238    <        0.5  km         ok 
+C. gamma <= -45 deg: |error - gravity-work prediction|     0.0077968    <      0.012             ok 
+========================================================================================
+
+========================================================================================
+Validation 3: USSA76 atmosphere vs the published standard table  --  PASS
+Validation 3 -- USSA76 atmosphere model against the published standard table.
+
+The implementation hard-codes only the sea-level state (288.15 K, 101325 Pa),
+the seven geopotential lapse rates and the USSA76 defining constants.  Every
+layer base temperature and, crucially, every layer base *pressure* is derived by
+chaining the barometric formula upward from sea level.  The published USSA76
+values at the layer boundaries are therefore a genuine external reference, and
+this test compares against them at
+
+    H = 0, 11, 20, 32, 47, 51, 71, 84.852 km' (geopotential)
+
+which are the geometric altitudes 0 ... 86 km.
+
+Additional internal checks:
+
+* **Hydrostatic residual.**  The model must satisfy ``dp/dz = -rho g(z)`` with
+  ``g(z) = g0 (r0/(r0+z))^2`` at every altitude from 0 to 500 km, including the
+  numerically integrated region above 86 km.  This is checked with centred
+  finite differences of the model itself.
+* **Speed of sound** at sea level must equal ``sqrt(gamma R T0)`` = 340.294 m/s.
+* **Monotonicity** of pressure and density.
+* **Interpolation error** of the fast tabulated evaluation against the exact
+  closed-form evaluation.
+* **Geopotential/geometric round trip.**
+----------------------------------------------------------------------------------------
+check                                                        value       threshold  
+max |dT/T| at the 8 layer boundaries                   1.52032e-16    <      1e-09             ok 
+max |dp/p| at the 8 layer boundaries                   1.75568e-07    <      1e-06             ok 
+max |drho/rho| at the 8 layer boundaries               2.27755e-05    <      5e-05             ok 
+median hydrostatic residual |dp/dz + rho g| / (rho g)   1.09721e-09    <      1e-08             ok 
+max hydrostatic residual |dp/dz + rho g| / (rho g)     5.79904e-07    <      1e-06             ok 
+density discontinuity at the 86 km model seam           8.3502e-05    <      0.001             ok 
+sea-level speed of sound vs sqrt(gamma R T0)                     0    <      1e-12             ok 
+pressure monotonically decreasing (# violations)                 0    <          1             ok 
+density monotonically decreasing (# violations)                  0    <          1             ok 
+tabulated vs exact: max |drho/rho| (0-300 km)          1.13104e-06    <      5e-06             ok 
+tabulated vs exact: max |dT/T| (0-300 km)              1.14781e-06    <      5e-06             ok 
+geopotential/geometric round-trip error                2.91038e-11    <      1e-07  m          ok 
+========================================================================================
+
+========================================================================================
+Validation 4: energy budget, RK4 convergence order and integrator cross-check  --  PASS
+Validation 4 -- energy budget and integrator convergence order.
+
+**A. Energy budget.**  Lift acts perpendicular to the velocity and therefore does
+no work, so along the whole trajectory the mechanical energy balance
+
+    d/dt ( V^2/2 - mu/r )  =  - (D/m) V
+
+must hold exactly.  The simulator carries ``W = int (D/m) V dt`` as a state
+variable integrated by the same Runge-Kutta scheme as everything else, so
+``Delta(V^2/2 - mu/r) + W`` is a genuine, non-trivial closure test of the
+right-hand side *and* of the integration: an error in the drag term, in the
+gravity term, or in the integrator all break it.  Checked for both the ballistic
+and the lifting entry.
+
+**B. Convergence order.**  A fixed-step classical RK4 is run on the same
+right-hand side over a fixed 100 s window with the step count doubled repeatedly,
+and the error measured against a DOP853 reference at ``rtol = atol = 1e-13``.
+The observed order ``log2(e_n / e_2n)`` must approach 4.
+
+The exponential atmosphere is used for this study because the USSA76 lapse-rate
+table makes ``T(z)`` only piecewise smooth: a formal order study across a layer
+boundary would measure the kink, not the integrator.  The aerodynamic model,
+gravity and spherical geometry are all fully active.
+
+**C. Integrator cross-check.**  The production adaptive DOP853 result and a
+fine fixed-step RK4 result must agree on the full USSA76 entry to within a metre
+in altitude and a millimetre per second in speed.
+
+**D. Tolerance self-convergence.**  The peak heat flux and total heat load of the
+nominal entry are recomputed at tolerances from 1e-6 to 1e-12 and compared with a
+1e-12 reference, confirming that the reported numbers are converged and not
+tolerance artefacts.
+----------------------------------------------------------------------------------------
+check                                                        value       threshold  
+A. ballistic: |dE + W_drag| / |dE|                     8.87757e-15    <      1e-10             ok 
+A. lifting:   |dE + W_drag| / |dE|                     9.52879e-14    <      1e-10             ok 
+B. RK4 observed order (finest pair)                        4.00798    >        3.8             ok 
+B. RK4 observed order (finest pair) upper bound            4.00798    <        4.3             ok 
+B. mean observed order over all refinements                4.01808    >        3.9             ok 
+B. RK4 relative error at n=4000 (dt = 25 ms)           6.28405e-12    <      1e-10             ok 
+C. DOP853 vs RK4 (dt=7.5 ms): altitude difference      4.63147e-06    <          1  m          ok 
+C. DOP853 vs RK4 (dt=7.5 ms): speed difference         2.69246e-07    <      0.001  m/s        ok 
+D. peak heat flux converged at rtol=1e-10              5.64836e-10    <      1e-07             ok 
+D. total heat load converged at rtol=1e-10             3.39531e-10    <      1e-07             ok 
+D. peak heat flux still accurate at a loose rtol=1e-6   2.22142e-06    <     0.0001             ok 
+========================================================================================
+
+
+OVERALL: 44/44 checks passed (ALL PASS)

@@ -1,0 +1,48 @@
+========================================================================================
+Validation 4: energy budget, RK4 convergence order and integrator cross-check  --  PASS
+Validation 4 -- energy budget and integrator convergence order.
+
+**A. Energy budget.**  Lift acts perpendicular to the velocity and therefore does
+no work, so along the whole trajectory the mechanical energy balance
+
+    d/dt ( V^2/2 - mu/r )  =  - (D/m) V
+
+must hold exactly.  The simulator carries ``W = int (D/m) V dt`` as a state
+variable integrated by the same Runge-Kutta scheme as everything else, so
+``Delta(V^2/2 - mu/r) + W`` is a genuine, non-trivial closure test of the
+right-hand side *and* of the integration: an error in the drag term, in the
+gravity term, or in the integrator all break it.  Checked for both the ballistic
+and the lifting entry.
+
+**B. Convergence order.**  A fixed-step classical RK4 is run on the same
+right-hand side over a fixed 100 s window with the step count doubled repeatedly,
+and the error measured against a DOP853 reference at ``rtol = atol = 1e-13``.
+The observed order ``log2(e_n / e_2n)`` must approach 4.
+
+The exponential atmosphere is used for this study because the USSA76 lapse-rate
+table makes ``T(z)`` only piecewise smooth: a formal order study across a layer
+boundary would measure the kink, not the integrator.  The aerodynamic model,
+gravity and spherical geometry are all fully active.
+
+**C. Integrator cross-check.**  The production adaptive DOP853 result and a
+fine fixed-step RK4 result must agree on the full USSA76 entry to within a metre
+in altitude and a millimetre per second in speed.
+
+**D. Tolerance self-convergence.**  The peak heat flux and total heat load of the
+nominal entry are recomputed at tolerances from 1e-6 to 1e-12 and compared with a
+1e-12 reference, confirming that the reported numbers are converged and not
+tolerance artefacts.
+----------------------------------------------------------------------------------------
+check                                                        value       threshold  
+A. ballistic: |dE + W_drag| / |dE|                     8.87757e-15    <      1e-10             ok 
+A. lifting:   |dE + W_drag| / |dE|                     9.52879e-14    <      1e-10             ok 
+B. RK4 observed order (finest pair)                        4.00798    >        3.8             ok 
+B. RK4 observed order (finest pair) upper bound            4.00798    <        4.3             ok 
+B. mean observed order over all refinements                4.01808    >        3.9             ok 
+B. RK4 relative error at n=4000 (dt = 25 ms)           6.28405e-12    <      1e-10             ok 
+C. DOP853 vs RK4 (dt=7.5 ms): altitude difference      4.63147e-06    <          1  m          ok 
+C. DOP853 vs RK4 (dt=7.5 ms): speed difference         2.69246e-07    <      0.001  m/s        ok 
+D. peak heat flux converged at rtol=1e-10              5.64836e-10    <      1e-07             ok 
+D. total heat load converged at rtol=1e-10             3.39531e-10    <      1e-07             ok 
+D. peak heat flux still accurate at a loose rtol=1e-6   2.22142e-06    <     0.0001             ok 
+========================================================================================

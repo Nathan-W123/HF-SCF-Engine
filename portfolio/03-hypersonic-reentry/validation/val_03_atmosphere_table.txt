@@ -1,0 +1,41 @@
+========================================================================================
+Validation 3: USSA76 atmosphere vs the published standard table  --  PASS
+Validation 3 -- USSA76 atmosphere model against the published standard table.
+
+The implementation hard-codes only the sea-level state (288.15 K, 101325 Pa),
+the seven geopotential lapse rates and the USSA76 defining constants.  Every
+layer base temperature and, crucially, every layer base *pressure* is derived by
+chaining the barometric formula upward from sea level.  The published USSA76
+values at the layer boundaries are therefore a genuine external reference, and
+this test compares against them at
+
+    H = 0, 11, 20, 32, 47, 51, 71, 84.852 km' (geopotential)
+
+which are the geometric altitudes 0 ... 86 km.
+
+Additional internal checks:
+
+* **Hydrostatic residual.**  The model must satisfy ``dp/dz = -rho g(z)`` with
+  ``g(z) = g0 (r0/(r0+z))^2`` at every altitude from 0 to 500 km, including the
+  numerically integrated region above 86 km.  This is checked with centred
+  finite differences of the model itself.
+* **Speed of sound** at sea level must equal ``sqrt(gamma R T0)`` = 340.294 m/s.
+* **Monotonicity** of pressure and density.
+* **Interpolation error** of the fast tabulated evaluation against the exact
+  closed-form evaluation.
+* **Geopotential/geometric round trip.**
+----------------------------------------------------------------------------------------
+check                                                        value       threshold  
+max |dT/T| at the 8 layer boundaries                   1.52032e-16    <      1e-09             ok 
+max |dp/p| at the 8 layer boundaries                   1.75568e-07    <      1e-06             ok 
+max |drho/rho| at the 8 layer boundaries               2.27755e-05    <      5e-05             ok 
+median hydrostatic residual |dp/dz + rho g| / (rho g)   1.09721e-09    <      1e-08             ok 
+max hydrostatic residual |dp/dz + rho g| / (rho g)     5.79904e-07    <      1e-06             ok 
+density discontinuity at the 86 km model seam           8.3502e-05    <      0.001             ok 
+sea-level speed of sound vs sqrt(gamma R T0)                     0    <      1e-12             ok 
+pressure monotonically decreasing (# violations)                 0    <          1             ok 
+density monotonically decreasing (# violations)                  0    <          1             ok 
+tabulated vs exact: max |drho/rho| (0-300 km)          1.13104e-06    <      5e-06             ok 
+tabulated vs exact: max |dT/T| (0-300 km)              1.14781e-06    <      5e-06             ok 
+geopotential/geometric round-trip error                2.91038e-11    <      1e-07  m          ok 
+========================================================================================

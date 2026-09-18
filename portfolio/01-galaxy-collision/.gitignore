@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Simulation output: regenerate with `make all` (hundreds of MB)
+data/
+
+# Rendered media is a build product, but hero.png / hero.mp4 are the
+# deliverables, so they are tracked deliberately.
+media/phone_*.png
+media/*_iter*.png

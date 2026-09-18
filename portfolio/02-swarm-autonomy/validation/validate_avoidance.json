@@ -1,0 +1,73 @@
+{
+  "all_passed": true,
+  "checks": {
+    "envelope_respected": true,
+    "orca_reciprocity_u_A_eq_minus_u_B": true,
+    "qp_matches_slsqp_to_1e-6": true,
+    "reciprocal_split_lands_on_the_obstacle_boundary": true,
+    "reciprocal_split_resolves_every_conflict": true,
+    "stress_test_all_goals_reached": true,
+    "stress_test_min_separation_ge_R_min": true,
+    "stress_test_zero_collisions": true
+  },
+  "description": "Safety invariant on the 36-vehicle antipodal swap, plus reciprocity/feasibility of the ORCA law and QP correctness.",
+  "envelope": {
+    "V_max_flown": 27.50637847094386,
+    "V_min_flown": 18.11109253985633,
+    "V_within_limits": true,
+    "abs_gamma_max_deg": 11.985260709590769,
+    "abs_phi_max_deg": 44.99999996466401,
+    "gamma_within_limits": true,
+    "load_factor_max": 1.414213561500908,
+    "load_factor_within_limits": true,
+    "phi_within_limits": true
+  },
+  "law_properties": {
+    "max_reciprocity_residual_mps": 0.0,
+    "min_halfspace_margin_A": 0.0,
+    "min_halfspace_margin_B": 0.0,
+    "n_cases": 1500,
+    "n_conflict_cases": 55,
+    "n_resolved_by_reciprocal_split": 55,
+    "worst_resolved_miss_over_r_comb": 0.9999999999999996
+  },
+  "name": "collision_avoidance",
+  "qp_cross_check": {
+    "max_objective_difference_vs_slsqp": 5.398987923399545e-10,
+    "max_solution_difference_vs_slsqp": 1.9711325479008313e-11,
+    "n_compared": 115
+  },
+  "stress_test": {
+    "R_collision_m": 15.0,
+    "R_min_m": 60.0,
+    "colliding_pairs": 0,
+    "collisions": 0,
+    "control_effort_max_rad_s": 7.627621423135074,
+    "control_effort_mean_rad_s": 3.6232179930503565,
+    "duration_s": 289.90000000000003,
+    "goal_completion": 1.0,
+    "max_deflection_mps": 58.80125106710271,
+    "mean_deflection_mps": 0.5849158246205141,
+    "min_separation_m": 70.31981616629723,
+    "min_separation_pair": [
+      15,
+      18
+    ],
+    "min_separation_time_s": 84.2,
+    "n_reached": 36,
+    "n_vehicles": 36,
+    "path_efficiency_all_vehicles_mean": 1.006259719766991,
+    "path_efficiency_max": 1.0291210015378587,
+    "path_efficiency_mean": 1.006259719766991,
+    "plan_failures": 0,
+    "plan_length_over_direct_mean": 1.0,
+    "qp_fallback_events": 101,
+    "qp_infeasible_events": 101,
+    "sampling_gap_m": 5.501275694188773,
+    "scenario": "swap",
+    "separation_margin_m": 10.31981616629723,
+    "separation_violation_samples": 0,
+    "time_to_completion_s": 172.60000000000002,
+    "violating_pairs": 0
+  }
+}

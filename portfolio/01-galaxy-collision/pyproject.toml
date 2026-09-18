@@ -1,0 +1,15 @@
+[project]
+name = "galcol"
+version = "1.0.0"
+description = "Barnes-Hut N-body simulation of a galaxy collision, with validation and a cinematic renderer"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q --strict-markers --durations=10"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}

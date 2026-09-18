@@ -1,0 +1,58 @@
+========================================================================================
+Validation 2: Allen-Eggers closed-form ballistic entry benchmark  --  PASS
+Validation 2 -- Allen-Eggers closed-form ballistic entry.
+
+The Allen-Eggers solution (NACA Report 1381, 1958) is the classical closed form
+for ballistic entry into an exponential atmosphere, and it is the strongest
+quantitative benchmark available to a reentry simulator because the peak
+deceleration
+
+    a_max = V_e^2 |sin gamma_e| / (2 e H)
+
+depends on *nothing* but entry speed, entry flight-path angle and the
+atmospheric scale height -- not on mass, area or drag coefficient.  The altitude
+at which it occurs,
+
+    z(a_max) = H ln( rho_0 H / (beta |sin gamma_e|) ),    beta = m/(C_D A),
+
+does depend on the ballistic coefficient but not on the entry speed.
+
+Anchoring.  Allen-Eggers is written for a vehicle arriving from *infinity* with
+speed ``V_e``.  The simulator starts at a finite 120 km, where the exponential
+atmosphere has already removed a fraction ``K exp(-z_0/H) ~ 3e-6`` of the speed.
+The analytic solution is therefore anchored by inverting the closed form at the
+simulator's initial state, ``V_e = V_0 exp(+K exp(-z_0/H))``, so that the two
+solutions share the same initial condition exactly.  This removes a 3e-6 offset
+that is a finite-entry-altitude artefact, not a physics difference.
+
+Three configurations isolate the three Allen-Eggers assumptions:
+
+**A. Exact limit.**  Exponential atmosphere, constant ``C_D``, no lift, gravity
+off, no curvature term, flight-path angle frozen.  Here the simulator's ODE *is*
+the Allen-Eggers ODE, so agreement must be at integrator precision.  This
+validates the closed-form implementation and the integrator together.
+
+**B. Constant-gamma assumption released.**  Gravity still off, but the spherical
+geometry, the ``V^2/r`` curvature term and a freely evolving flight-path angle
+are restored.  The only remaining difference from Allen-Eggers is that gamma is
+no longer constant, so the error must vanish identically as the entry becomes
+vertical (where there is nothing to turn) and grow as the entry becomes shallow.
+
+**C. Full physics.**  Inverse-square gravity restored as well.  The residual
+error no longer vanishes at vertical entry: gravity does work on the vehicle
+between the entry interface and the peak-deceleration altitude, which
+Allen-Eggers ignores.  The test asserts that the residual is *quantitatively
+explained* by that work, ``2 g_bar (z_0 - z_peak) / V_e^2``.
+----------------------------------------------------------------------------------------
+check                                                        value       threshold  
+A. exact limit: peak deceleration rel. error           2.54363e-09    <      1e-06             ok 
+A. exact limit: peak-altitude rel. error               6.24135e-08    <      1e-06             ok 
+A. exact limit: V at analytic peak rel. error          6.80971e-10    <      1e-06             ok 
+A. exact limit: max |a_sim - a_AE| / a_max over profile   5.11344e-11    <      1e-08             ok 
+B. gravity off, gamma=-90 deg: |a_max| rel. error      1.55861e-12    <      1e-06             ok 
+B. gravity off, gamma=-45 deg: |a_max| rel. error        0.0127871    <       0.02             ok 
+B. |error| decreases monotonically with steepness                1    >        0.5             ok 
+C. full physics, gamma <= -30 deg: worst |a_max| rel. error      0.049025    <       0.06             ok 
+C. full physics, gamma <= -30 deg: worst |z_peak| error      0.161238    <        0.5  km         ok 
+C. gamma <= -45 deg: |error - gravity-work prediction|     0.0077968    <      0.012             ok 
+========================================================================================

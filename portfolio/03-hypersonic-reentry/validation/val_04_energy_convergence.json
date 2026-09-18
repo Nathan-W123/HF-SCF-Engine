@@ -1,0 +1,173 @@
+{
+  "name": "Validation 4: energy budget, RK4 convergence order and integrator cross-check",
+  "description": "Validation 4 -- energy budget and integrator convergence order.\n\n**A. Energy budget.**  Lift acts perpendicular to the velocity and therefore does\nno work, so along the whole trajectory the mechanical energy balance\n\n    d/dt ( V^2/2 - mu/r )  =  - (D/m) V\n\nmust hold exactly.  The simulator carries ``W = int (D/m) V dt`` as a state\nvariable integrated by the same Runge-Kutta scheme as everything else, so\n``Delta(V^2/2 - mu/r) + W`` is a genuine, non-trivial closure test of the\nright-hand side *and* of the integration: an error in the drag term, in the\ngravity term, or in the integrator all break it.  Checked for both the ballistic\nand the lifting entry.\n\n**B. Convergence order.**  A fixed-step classical RK4 is run on the same\nright-hand side over a fixed 100 s window with the step count doubled repeatedly,\nand the error measured against a DOP853 reference at ``rtol = atol = 1e-13``.\nThe observed order ``log2(e_n / e_2n)`` must approach 4.\n\nThe exponential atmosphere is used for this study because the USSA76 lapse-rate\ntable makes ``T(z)`` only piecewise smooth: a formal order study across a layer\nboundary would measure the kink, not the integrator.  The aerodynamic model,\ngravity and spherical geometry are all fully active.\n\n**C. Integrator cross-check.**  The production adaptive DOP853 result and a\nfine fixed-step RK4 result must agree on the full USSA76 entry to within a metre\nin altitude and a millimetre per second in speed.\n\n**D. Tolerance self-convergence.**  The peak heat flux and total heat load of the\nnominal entry are recomputed at tolerances from 1e-6 to 1e-12 and compared with a\n1e-12 reference, confirming that the reported numbers are converged and not\ntolerance artefacts.\n",
+  "passed": true,
+  "checks": [
+    {
+      "name": "A. ballistic: |dE + W_drag| / |dE|",
+      "value": 8.877565105817203e-15,
+      "threshold": 1e-10,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "A. lifting:   |dE + W_drag| / |dE|",
+      "value": 9.528793360456687e-14,
+      "threshold": 1e-10,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "B. RK4 observed order (finest pair)",
+      "value": 4.007978499825699,
+      "threshold": 3.8,
+      "comparison": ">",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "B. RK4 observed order (finest pair) upper bound",
+      "value": 4.007978499825699,
+      "threshold": 4.3,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "B. mean observed order over all refinements",
+      "value": 4.018076380472692,
+      "threshold": 3.9,
+      "comparison": ">",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "B. RK4 relative error at n=4000 (dt = 25 ms)",
+      "value": 6.284047156508783e-12,
+      "threshold": 1e-10,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "C. DOP853 vs RK4 (dt=7.5 ms): altitude difference",
+      "value": 4.631467163562775e-06,
+      "threshold": 1.0,
+      "comparison": "<",
+      "units": "m",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "C. DOP853 vs RK4 (dt=7.5 ms): speed difference",
+      "value": 2.692464704523445e-07,
+      "threshold": 0.001,
+      "comparison": "<",
+      "units": "m/s",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "D. peak heat flux converged at rtol=1e-10",
+      "value": 5.648364143396625e-10,
+      "threshold": 1e-07,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "D. total heat load converged at rtol=1e-10",
+      "value": 3.395305795186663e-10,
+      "threshold": 1e-07,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    },
+    {
+      "name": "D. peak heat flux still accurate at a loose rtol=1e-6",
+      "value": 2.2214158820223005e-06,
+      "threshold": 0.0001,
+      "comparison": "<",
+      "units": "",
+      "note": "",
+      "passed": true
+    }
+  ],
+  "data": {
+    "energy_budget": {
+      "ballistic": {
+        "delta_specific_energy_J_per_kg": -31472230.172839083,
+        "drag_work_J_per_kg": 31472230.172838803,
+        "relative_closure": 8.877565105817203e-15
+      },
+      "lifting": {
+        "delta_specific_energy_J_per_kg": -31471547.097523734,
+        "drag_work_J_per_kg": 31471547.097520735,
+        "relative_closure": 9.528793360456687e-14
+      }
+    },
+    "rk4_convergence": {
+      "window_s": 100.0,
+      "steps": [
+        125,
+        250,
+        500,
+        1000,
+        2000,
+        4000
+      ],
+      "normalised_error": [
+        7.015312350254893e-06,
+        4.2566159899798914e-07,
+        2.6197683728555506e-08,
+        1.6244891966968697e-09,
+        1.0110233497759671e-10,
+        6.284047156508783e-12
+      ],
+      "observed_orders": [
+        4.04272849135944,
+        4.022195777003814,
+        4.011381206850703,
+        4.006097927323807,
+        4.007978499825699
+      ],
+      "note": "Refining beyond n=4000 (dt=25 ms) saturates against the accuracy of the DOP853 reference itself (~3e-12 relative), so the study stops there."
+    },
+    "integrator_cross_check": {
+      "window_s": 150.0,
+      "rk4_steps": 20000,
+      "altitude_difference_m": 4.631467163562775e-06,
+      "speed_difference_m_s": 2.692464704523445e-07
+    },
+    "tolerance_study": [
+      {
+        "rtol": 1e-06,
+        "peak_q_rel_error": 2.2214158820223005e-06,
+        "heat_load_rel_error": 2.5583076977230654e-06,
+        "n_rhs_evals": 1172
+      },
+      {
+        "rtol": 1e-08,
+        "peak_q_rel_error": 1.3034216174747777e-09,
+        "heat_load_rel_error": 1.6445351806360042e-08,
+        "n_rhs_evals": 2210
+      },
+      {
+        "rtol": 1e-10,
+        "peak_q_rel_error": 5.648364143396625e-10,
+        "heat_load_rel_error": 3.395305795186663e-10,
+        "n_rhs_evals": 15557
+      }
+    ]
+  }
+}

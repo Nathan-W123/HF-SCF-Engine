@@ -1,0 +1,106 @@
+{
+  "name": "kepler_two_body",
+  "passed": true,
+  "checks": [
+    {
+      "label": "max |r_sim - r_exact| / a over 1 orbit at dt=0.83 Myr (production dt)",
+      "value": "2.767e-03",
+      "threshold": "< 1e-2",
+      "passed": true
+    },
+    {
+      "label": "measured convergence order (slope of log err vs log dt)",
+      "value": "2.0005",
+      "threshold": "2.00 +/- 0.15",
+      "passed": true
+    },
+    {
+      "label": "error-reduction factor per dt halving (min over ladder)",
+      "value": "4.000",
+      "threshold": "> 3.6",
+      "passed": true
+    },
+    {
+      "label": "max |r_sim - r_exact| / a at the finest dt (0.104 Myr)",
+      "value": "4.321e-05",
+      "threshold": "< 1e-3",
+      "passed": true
+    }
+  ],
+  "semi_major_axis_kpc": 10.0,
+  "eccentricity": 0.5,
+  "masses_1e10_msun": [
+    1.0,
+    1.0
+  ],
+  "period_gyr": 0.662432100073421,
+  "convergence_slope": 2.00047208515055,
+  "production_dt_row": {
+    "n_steps": 800,
+    "dt": 0.0008468467090773186,
+    "dt_myr": 0.8280401250917763,
+    "period": 0.6774773672618549,
+    "period_gyr": 0.662432100073421,
+    "max_err": 0.0027666768786059706,
+    "final_err": 0.0027653107485946784,
+    "rms_err": 0.001192331544731885
+  },
+  "error_ratios": [
+    4.004455444952153,
+    4.001075714010481,
+    4.00027227175386,
+    4.000069777192184
+  ],
+  "ladder": [
+    {
+      "n_steps": 400,
+      "dt": 0.0016936934181546372,
+      "dt_myr": 1.6560802501835525,
+      "period": 0.6774773672618549,
+      "period_gyr": 0.662432100073421,
+      "max_err": 0.011079034290956906,
+      "final_err": 0.011074704171068052,
+      "rms_err": 0.004774428985974139
+    },
+    {
+      "n_steps": 800,
+      "dt": 0.0008468467090773186,
+      "dt_myr": 0.8280401250917763,
+      "period": 0.6774773672618549,
+      "period_gyr": 0.662432100073421,
+      "max_err": 0.0027666768786059706,
+      "final_err": 0.0027653107485946784,
+      "rms_err": 0.001192331544731885
+    },
+    {
+      "n_steps": 1600,
+      "dt": 0.0004234233545386593,
+      "dt_myr": 0.41402006254588813,
+      "period": 0.6774773672618549,
+      "period_gyr": 0.662432100073421,
+      "max_err": 0.0006914832600937687,
+      "final_err": 0.0006911146327302987,
+      "rms_err": 0.0002979243912580411
+    },
+    {
+      "n_steps": 3200,
+      "dt": 0.00021171167726932965,
+      "dt_myr": 0.20701003127294407,
+      "period": 0.6774773672618549,
+      "period_gyr": 0.662432100073421,
+      "max_err": 0.00017285904886434094,
+      "final_err": 0.00017276530020594926,
+      "rms_err": 7.44613518758176e-05
+    },
+    {
+      "n_steps": 6400,
+      "dt": 0.00010585583863466483,
+      "dt_myr": 0.10350501563647203,
+      "period": 0.6774773672618549,
+      "period_gyr": 0.662432100073421,
+      "max_err": 4.3214008378043325e-05,
+      "final_err": 4.3190489499516995e-05,
+      "rms_err": 1.8612873389529302e-05
+    }
+  ]
+}

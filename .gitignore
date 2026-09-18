@@ -19,3 +19,6 @@ frontend/build/
 # OS
 .DS_Store
 Thumbs.db
+
+# viz
+viz/.cache/

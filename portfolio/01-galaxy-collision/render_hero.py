@@ -51,6 +51,13 @@ BLOOM_SIGMAS = (3.0, 11.0, 34.0)
 SATURATION = 1.38
 FRAME_BIAS_Y = 0.0           # centre the pair and the bridge
 MAX_BLUR_GYR = 0.004
+
+# Auto-framing robustness.  Stars ejected toward the camera get an unbounded
+# 1/depth^2 perspective weight; these bound its influence so the aim point
+# follows the bulk of the light instead of one foreground particle.
+NEAR_CULL_FRAC = 0.05        # ignore particles closer than 5% of median depth
+PERSPECTIVE_WEIGHT_CAP = 25.0
+TRACK_MAX_OFFSET_KPC = 60.0  # aim point may not stray further from the nuclei
 BULGE_BRIGHTNESS = 2.1       # surface-brightness weight for the old population
 SHARP_FRAC = 0.42            # light routed through the near-pixel kernel
 
@@ -166,6 +173,14 @@ def framing_track(snaps, lum):
         sp, _ = snaps.get(i)
         cam = auto_frame(cam, sp, lum, bias_y=FRAME_BIAS_Y)
         out[i] = cam.target
+    # Belt and braces: if the framing solve ever returns a wild aim point, fall
+    # back to the nucleus track rather than pointing the camera at empty space.
+    off = np.linalg.norm(out - nuc, axis=1)
+    bad = off > TRACK_MAX_OFFSET_KPC
+    if np.any(bad):
+        print(f"  auto-framing fell back to the nucleus track for "
+              f"{int(bad.sum())}/{len(out)} snapshots", flush=True)
+        out[bad] = nuc[bad]
     k = np.array([0.05, 0.12, 0.20, 0.26, 0.20, 0.12, 0.05])
     pad = np.pad(out, ((3, 3), (0, 0)), mode="edge")
     return np.stack([np.convolve(pad[:, j], k, mode="valid") for j in range(3)], 1)
@@ -218,10 +233,20 @@ def auto_frame(cam, pos, weights, lo=6.0, hi=94.0, bias_y=0.06, n_iter=2):
                              np.linalg.norm(cam.eye - cam.target)))
     for _ in range(n_iter):
         sx, sy, depth = cam.project(pos)
-        vis = depth > 1e-3
+        # The 1/depth^2 perspective weight below is unbounded as depth -> 0, so
+        # a single star ejected toward the camera can outweigh the whole galaxy
+        # and drag the aim point arbitrarily far off the subject.  Cull anything
+        # closer than a fraction of the median depth and cap the weight, so the
+        # framing stays governed by the bulk of the light.
+        finite = depth > 1e-3
+        if not np.any(finite):
+            return cam
+        d_med = float(np.median(depth[finite]))
+        vis = depth > max(1e-3, NEAR_CULL_FRAC * d_med)
         if not np.any(vis):
             return cam
-        w = weights[vis] * (float(np.median(depth[vis])) / depth[vis]) ** 2
+        w = weights[vis] * np.minimum((d_med / depth[vis]) ** 2,
+                                      PERSPECTIVE_WEIGHT_CAP)
         order_x = np.argsort(sx[vis])
         order_y = np.argsort(sy[vis])
         cw = np.cumsum(w[order_x]); cw /= cw[-1]

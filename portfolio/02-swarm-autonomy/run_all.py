@@ -30,6 +30,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "src"))
 sys.path.insert(0, os.path.join(HERE, "validation"))
 
+from common import jsonable as jsonable_early                 # noqa: E402
 from swarmsim import __version__, metrics, scenarios, sim     # noqa: E402
 from swarmsim.config import DrydenParams, WindParams          # noqa: E402
 
@@ -68,12 +69,14 @@ def _run_scenario(name, quick=False):
 def _sweep_job(args):
     scale, seed, quick = args
     n = 18 if quick else 28
-    t_max = 150.0 if quick else 240.0
+    # The transit corridor is ~7.8 km along the diagonal at 25 m/s, so the
+    # horizon has to leave room for the crossing plus a turbulence allowance.
+    t_max = 200.0 if quick else 400.0
     w = WindParams(mean=(-6.0 * min(scale, 1.5), 3.5 * min(scale, 1.5), 0.0),
                    dryden=DrydenParams().scaled(scale),
                    turbulence_on=scale > 0.0)
     spec = scenarios.transit(n=n, seed=seed, t_max=t_max, wind=w,
-                             name=f"sweep_s{scale}_{seed}")
+                             name=f"sweep_s{scale}_{seed}", log_every=4)
     res = sim.run(spec)
     m = metrics.scenario_metrics(res)
     m.update(metrics.envelope_check(res))
@@ -138,9 +141,30 @@ def main():
         "total_zone_incursion_samples":
             int(sum(r["zone_incursion_samples"] for r in rows)),
     }
+    # per-turbulence-level breakdown, so the headline table needs no re-derivation
+    by_level = {}
+    for L in SWEEP_SIGMA:
+        rs = [r for r in rows if r["sigma_scale"] == L]
+        ms = sorted(r["min_separation_m"] for r in rs)
+        by_level[str(L)] = {
+            "sigma_w_mps": DrydenParams().scaled(L).sigma_w,
+            "mean_wind_mps": rs[0]["mean_wind_mps"],
+            "min_separation_worst_m": float(ms[0]),
+            "min_separation_median_m": float(ms[len(ms) // 2]),
+            "separation_violation_samples": int(
+                sum(r["separation_violation_samples"] for r in rs)),
+            "collisions": int(sum(r["collisions"] for r in rs)),
+            "goal_completion_mean": float(
+                np.mean([r["goal_completion"] for r in rs])),
+            "path_efficiency_mean": float(
+                np.mean([r["path_efficiency_mean"] for r in rs])),
+            "zone_incursion_samples": int(
+                sum(r["zone_incursion_samples"] for r in rs)),
+        }
+    sweep["by_level"] = by_level
     sweep["aggregate"] = agg
     with open(os.path.join(RES, "sweep.json"), "w") as fh:
-        json.dump(sweep, fh, indent=2)
+        json.dump(jsonable_early(sweep), fh, indent=2)
     print(f"  {len(rows)} runs; worst min separation "
           f"{agg['min_separation_over_all_runs_m']:.1f} m; "
           f"collisions {agg['total_collisions']}; "
@@ -154,7 +178,7 @@ def main():
     import validate_avoidance
     import validate_regression
     import validate_turbulence
-    from common import report
+    from common import jsonable, report
 
     with open(os.path.join(RES, "swap.pkl"), "rb") as fh:
         swap_result = pickle.load(fh)
@@ -187,8 +211,9 @@ def main():
         subprocess.run(cmd, check=True)
 
     summary["total_wall_time_s"] = time.time() - t_start
+    # numpy scalars (np.bool_ in particular) are not JSON-serialisable
     with open(os.path.join(RES, "summary.json"), "w") as fh:
-        json.dump(summary, fh, indent=2, sort_keys=True)
+        json.dump(jsonable(summary), fh, indent=2, sort_keys=True)
     print(f"\nsummary -> {os.path.join(RES, 'summary.json')}   "
           f"total {summary['total_wall_time_s'] / 60:.1f} min")
     if not summary["validation_all_passed"]:

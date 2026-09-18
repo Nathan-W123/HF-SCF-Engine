@@ -180,7 +180,7 @@ def _filmic(x):
 
 def tonemap(buf, exposure=1.0, bloom_sigmas=(2.0, 8.0, 28.0),
             bloom_gains=(0.55, 0.30, 0.18), gamma=2.2, saturation=1.12,
-            bloom_scale=4, hue_preserve=0.62, dither=True):
+            bloom_scale=4, hue_preserve=0.45, dither=True):
     """Multi-scale bloom + filmic tone map -> uint8 RGB.
 
     ``bloom_scale`` runs the bloom convolutions on a downsampled copy, which
@@ -287,9 +287,18 @@ class FrameRenderer:
 
     Three depth-of-field classes are splatted into buffers whose *resolution
     matches their kernel* -- sharp at 1080p, medium at half, soft at quarter.
-    They are summed and blurred ONCE at full resolution with the sharp-class
-    sigma; that single pass both gives the sharp class its kernel and erases
-    the block structure left by the cheap nearest-neighbour upsample.
+    They are summed and blurred ONCE at full resolution with the in-focus
+    sigma; that single pass both gives the in-focus class its kernel and
+    erases the block structure left by the cheap nearest-neighbour upsample.
+
+    On top of that the renderer is *dual scale*.  A fraction ``sharp_frac`` of
+    each in-focus particle's light is deposited into a separate buffer that is
+    blurred with a near-pixel kernel, and composited over the diffuse result
+    before bloom.  Without it every particle is a soft blob of the same size
+    and the tails read as cotton wool; with it each particle is a crisp point
+    sitting inside a smooth envelope, which is what gives a real astronomical
+    image its bite.  Out-of-focus particles get no sharp component at all, so
+    depth of field still reads.
     """
 
     DOF_FACTORS = (1, 2, 4)
@@ -299,6 +308,7 @@ class FrameRenderer:
                  dof_split=(0.34, 0.95), dof_strength=1.0,
                  halo_gain=0.030, halo_sigma=13.0, halo_scale=4,
                  exposure=1.0, star_gain=1.0, base_sigma=2.6,
+                 sharp_frac=0.42, sharp_sigma=0.85,
                  bloom_sigmas=(3.0, 11.0, 34.0), bloom_gains=(0.55, 0.34, 0.24),
                  bloom_scale=4, saturation=1.20, gamma=2.2):
         self.W = int(width)
@@ -311,6 +321,8 @@ class FrameRenderer:
         self.exposure = exposure
         self.star_gain = star_gain
         self.base_sigma = base_sigma
+        self.sharp_frac = float(sharp_frac)
+        self.sharp_sigma = float(sharp_sigma)
         self.bloom_sigmas = bloom_sigmas
         self.bloom_gains = bloom_gains
         self.bloom_scale = bloom_scale
@@ -318,6 +330,7 @@ class FrameRenderer:
         self.gamma = gamma
         self.bufs = [np.zeros((self.H // f, self.W // f, 3), np.float32)
                      for f in self.DOF_FACTORS]
+        self.sharp_buf = np.zeros((self.H, self.W, 3), np.float32)
         hh = max(1, self.H // halo_scale)
         hw = max(1, self.W // halo_scale)
         self.halo_buf = np.zeros((hh, hw, 3), np.float32)
@@ -332,6 +345,7 @@ class FrameRenderer:
     def clear(self):
         for b in self.bufs:
             b.fill(0.0)
+        self.sharp_buf.fill(0.0)
         self.halo_buf.fill(0.0)
 
     # -- deposition -------------------------------------------------------
@@ -355,10 +369,17 @@ class FrameRenderer:
         cls = np.digitize(key, self.dof_split)
         for k, fac in enumerate(self.DOF_FACTORS):
             m = cls == k
-            if np.any(m):
-                inv = 1.0 / fac
-                splat(self.bufs[k], sx[m] * inv, sy[m] * inv,
-                      colours[m], w[m] * np.float32(fac * fac))
+            if not np.any(m):
+                continue
+            inv = 1.0 / fac
+            wk = w[m]
+            if k == 0 and self.sharp_frac > 0.0:
+                # in focus: split into a crisp point plus a diffuse halo
+                splat(self.sharp_buf, sx[m], sy[m], colours[m],
+                      wk * np.float32(self.sharp_frac))
+                wk = wk * np.float32(1.0 - self.sharp_frac)
+            splat(self.bufs[k], sx[m] * inv, sy[m] * inv,
+                  colours[m], wk * np.float32(fac * fac))
 
     def add_halo(self, cam: Camera, pos, weight=1.0):
         if self.halo_gain <= 0 or pos.shape[0] == 0:
@@ -387,6 +408,10 @@ class FrameRenderer:
             hb = _upsample(hb, f)[:self.H, :self.W, :] * np.float32(1.0 / (f * f))
             acc += np.float32(self.halo_gain) * hb
         acc = gaussian_filter(acc, sigma=(s0, s0, 0), truncate=3.0)
+        if self.sharp_frac > 0.0:
+            acc += gaussian_filter(self.sharp_buf,
+                                   sigma=(self.sharp_sigma, self.sharp_sigma, 0),
+                                   truncate=3.0)
         return tonemap(acc, exposure=self.exposure,
                        bloom_sigmas=self.bloom_sigmas,
                        bloom_gains=self.bloom_gains,

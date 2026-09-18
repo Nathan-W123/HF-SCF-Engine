@@ -35,7 +35,7 @@ SUBFRAMES = 3                # temporal motion-blur samples per output frame
 SHUTTER = 0.55               # fraction of the frame interval the shutter is open
 FOV_DEG = 32.0
 
-EXPOSURE_TARGET = 4.0        # target HDR level for the 99.7th luminance pct
+EXPOSURE_TARGET = 7.5        # target HDR level for the 99.7th luminance pct
 EXPOSURE_CAL_TIME = 0.50     # Gyr at which auto-exposure is calibrated
 EXPOSURE_TRIM = 1.0          # manual multiplier on top of the calibration
 
@@ -48,21 +48,23 @@ DEPTH_SCALE = 55.0           # kpc from the focus plane per DOF class step
 KERNEL_KPC = 0.33
 BLOOM_GAINS = (0.82, 0.54, 0.42)
 BLOOM_SIGMAS = (3.0, 11.0, 34.0)
-SATURATION = 1.30
-FRAME_BIAS_Y = -0.02         # compose a touch below dead centre
+SATURATION = 1.38
+FRAME_BIAS_Y = 0.0           # centre the pair and the bridge
 MAX_BLUR_GYR = 0.004
+BULGE_BRIGHTNESS = 2.1       # surface-brightness weight for the old population
+SHARP_FRAC = 0.42            # light routed through the near-pixel kernel
 
 # Camera keyframes: (t_gyr, distance_kpc, azimuth_deg, elevation_deg, roll_deg)
 # Distances are set from the measured extent of the stellar material at each
 # epoch (results/morphology.json), so the subject fills the frame throughout.
 CAM_KEYS = [
-    (0.00, 196.0,  12.0, 44.0, 118.0),
-    (0.35, 132.0,  30.0, 48.0, 110.0),
-    (0.50, 118.0,  40.0, 50.0, 105.0),   # the hero frame
-    (0.80, 138.0,  62.0, 52.0,  98.0),
-    (1.10, 152.0,  86.0, 46.0,  92.0),
-    (1.60, 228.0, 118.0, 54.0,  84.0),
-    (2.20, 286.0, 152.0, 64.0,  76.0),
+    (0.00, 176.0,  12.0, 44.0, 118.0),
+    (0.35, 122.0,  30.0, 48.0, 110.0),
+    (0.50, 110.0,  40.0, 50.0, 105.0),   # the hero frame
+    (0.80, 128.0,  62.0, 52.0,  98.0),
+    (1.10, 140.0,  86.0, 46.0,  92.0),
+    (1.60, 206.0, 118.0, 54.0,  84.0),
+    (2.20, 256.0, 152.0, 64.0,  76.0),
 ]
 
 # Video time warp: (fraction through the video, simulation time in Gyr).
@@ -181,7 +183,11 @@ def star_colours(snaps, rng):
     col = population_colours(snaps.star_ptype, r_init)
     lum = luminosity_scatter(s0.shape[0], rng)
     # the bulge is intrinsically the brightest surface-brightness component
-    lum = lum * np.where(snaps.star_ptype == PTYPE_BULGE, 1.35, 1.0)
+    # The bulge is by far the highest-surface-brightness stellar component of
+    # a real spiral; weighting it up is what makes the two nuclei read as the
+    # anchors of the frame and drives their bloom haloes.  This is a rendering
+    # weight, not a change to any simulated quantity.
+    lum = lum * np.where(snaps.star_ptype == PTYPE_BULGE, BULGE_BRIGHTNESS, 1.0)
     return col, lum.astype(np.float32), r_init
 
 
@@ -196,7 +202,7 @@ def _smoothstep_interp(keys, x):
     return ys[j] + (ys[j + 1] - ys[j]) * s
 
 
-def auto_frame(cam, pos, weights, lo=2.5, hi=97.5, bias_y=0.06, n_iter=2):
+def auto_frame(cam, pos, weights, lo=6.0, hi=94.0, bias_y=0.06, n_iter=2):
     """Re-aim the camera so the stellar light is centred in the frame.
 
     Centring on the nuclei leaves the frame lopsided, because the tidal tails
@@ -302,6 +308,10 @@ def calibrate_exposure(snaps, fr, colours, lum, t_gyr, track=None):
         b = gaussian_filter(buf, sigma=(sig_low, sig_low, 0))
         acc += _upsample(b, fac)[:HEIGHT, :WIDTH, :] * np.float32(1.0 / (fac * fac))
     acc = gaussian_filter(acc, sigma=(s0, s0, 0), truncate=3.0)
+    if fr.sharp_frac > 0.0:
+        acc = acc + gaussian_filter(fr.sharp_buf,
+                                    sigma=(fr.sharp_sigma, fr.sharp_sigma, 0),
+                                    truncate=3.0)
     lumin = acc @ np.array([0.2126, 0.7152, 0.0722], np.float32)
     hi = float(np.percentile(lumin[lumin > 0], 99.7)) if np.any(lumin > 0) else 1.0
     return EXPOSURE_TRIM * EXPOSURE_TARGET / max(hi, 1e-12)
@@ -334,7 +344,8 @@ def main():
 
     fr = FrameRenderer(width=WIDTH, height=HEIGHT, halo_gain=HALO_GAIN,
                        dof_strength=DOF_STRENGTH, bloom_gains=BLOOM_GAINS,
-                       bloom_sigmas=BLOOM_SIGMAS, saturation=SATURATION)
+                       bloom_sigmas=BLOOM_SIGMAS, saturation=SATURATION,
+                       sharp_frac=SHARP_FRAC)
     if args.kernel is not None:
         globals()["KERNEL_KPC"] = args.kernel
     if args.exposure is not None:
@@ -349,7 +360,7 @@ def main():
         import imageio.v3 as iio
         t_hero = min(args.hero_time, snaps.t_gyr[-1])
         img = render_frame(snaps, fr, colours, lum, t_hero,
-                           dt_blur=0.0022, subframes=8, exposure=exposure,
+                           dt_blur=0.0014, subframes=8, exposure=exposure,
                            track=track)
         iio.imwrite(out / args.still_name, img)
         small = img[::(HEIGHT // 225), ::(WIDTH // 400)][:225, :400]

@@ -49,7 +49,7 @@ class Resolution:
     n_disk: int = 15000
     n_bulge: int = 4000
     n_halo: int = 17000
-    eps_disk: float = 0.25    # kpc, Plummer softening
+    eps_disk: float = 0.20    # kpc, Plummer softening
     eps_bulge: float = 0.30
     eps_halo: float = 0.70
 

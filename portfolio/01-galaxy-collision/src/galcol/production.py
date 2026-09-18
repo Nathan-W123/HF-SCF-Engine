@@ -28,7 +28,7 @@ SEED = 20260918
 # validation is what checks that this actually worked.
 RESOLUTION = Resolution(
     n_disk=15000, n_bulge=4000, n_halo=17000,
-    eps_disk=0.25, eps_bulge=0.30, eps_halo=0.70,
+    eps_disk=0.20, eps_bulge=0.30, eps_halo=0.70,
 )
 
 # ---- encounter geometry --------------------------------------------------

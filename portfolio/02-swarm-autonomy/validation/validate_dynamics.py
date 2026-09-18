@@ -9,9 +9,12 @@ A. **Steady coordinated-turn radius.**  Hold ``phi_cmd = phi``, ``gamma = 0``,
    Threshold: relative error < 1e-6 for every (V, phi) in the grid.
 
 B. **Envelope limits.**  Drive the model with commands well outside the
-   envelope (bank, airspeed, flight-path angle) and confirm that the flown
-   states stay inside the limits, and that the commanded *rates* never exceed
-   the roll-rate / flight-path-rate / acceleration limits.
+   envelope (bank, airspeed, flight-path angle), reversing them every 12 s --
+   long enough for the rate limits to sweep each state across its whole range --
+   and confirm that over the *whole* 120 s trajectory the flown states stay inside
+   the airspeed, bank, flight-path-angle and load-factor limits, and that the
+   realised *rates* never exceed the roll-rate, flight-path-rate and
+   acceleration limits.
 
 C. **Integrator convergence order.**  Integrate a smooth, non-saturating
    manoeuvre (so the right-hand side is C-infinity and the classical order
@@ -60,7 +63,12 @@ def check_turn_radius():
 def check_limits():
     vp = VehicleParams()
     dt = 0.02
-    n = int(60.0 / dt)
+    # The half-period has to be long enough for the rate limits to sweep each
+    # state across its whole range: at 2 m/s^2 the airspeed needs 8 s to cross
+    # the 18-34 m/s envelope, so a 4 s half-period would never reach V_min and
+    # the check would be vacuous at the bottom end.
+    half_period = 12.0
+    n = int(120.0 / dt)
     rng = np.random.default_rng(0)
     N = 8
     s = np.zeros((N, 7))
@@ -69,19 +77,30 @@ def check_limits():
     s[:, 4] = rng.uniform(-np.pi, np.pi, N)
     prev = s.copy()
     max_rate = np.zeros(3)      # |dV/dt|, |dgamma/dt|, |dphi/dt|
+    # Track the extremes over the whole trajectory, not just the final state.
+    V_lo, V_hi = np.inf, -np.inf
+    phi_hi, gam_hi, n_hi = 0.0, 0.0, 0.0
     for k in range(n):
-        # deliberately illegal commands, switching sign every 4 s
-        sgn = 1.0 if (k * dt) % 8.0 < 4.0 else -1.0
+        # deliberately illegal commands, reversing every half-period
+        sgn = 1.0 if (k * dt) % (2 * half_period) < half_period else -1.0
         cmd = np.tile(np.array([[60.0 * sgn if sgn > 0 else 2.0,
                                  sgn * np.deg2rad(85.0),
                                  sgn * np.deg2rad(40.0)]]), (N, 1))
         s = dy.rk4_step(s, cmd, dt, vp, wind=np.zeros((N, 3)))
         rate = np.abs(s[:, [3, 5, 6]] - prev[:, [3, 5, 6]]) / dt
         max_rate = np.maximum(max_rate, rate.max(axis=0))
+        V_lo = min(V_lo, float(s[:, 3].min()))
+        V_hi = max(V_hi, float(s[:, 3].max()))
+        phi_hi = max(phi_hi, float(np.abs(s[:, 6]).max()))
+        gam_hi = max(gam_hi, float(np.abs(s[:, 5]).max()))
+        n_hi = max(n_hi, float(dy.load_factor(s[:, 6]).max()))
         prev = s.copy()
     return {
-        "V_min_flown": float(s[:, 3].min()),
-        "abs_phi_max_deg": float(np.rad2deg(np.abs(s[:, 6]).max())),
+        "V_min_flown": V_lo,
+        "V_max_flown": V_hi,
+        "abs_phi_max_deg": float(np.rad2deg(phi_hi)),
+        "abs_gamma_max_deg": float(np.rad2deg(gam_hi)),
+        "load_factor_max": n_hi,
         "max_dV_dt": float(max_rate[0]),
         "max_dgamma_dt_deg_s": float(np.rad2deg(max_rate[1])),
         "max_dphi_dt_deg_s": float(np.rad2deg(max_rate[2])),
@@ -89,6 +108,9 @@ def check_limits():
         "limit_gamma_dot_deg_s": float(np.rad2deg(vp.gamma_dot_max)),
         "limit_p_max_deg_s": float(np.rad2deg(vp.p_max)),
         "limit_phi_deg": float(np.rad2deg(vp.phi_limit)),
+        "limit_V_mps": [vp.V_min, vp.V_max],
+        "limit_gamma_deg": float(np.rad2deg(vp.gamma_max)),
+        "limit_load_factor": vp.load_factor_max,
     }
 
 
@@ -139,7 +161,10 @@ def run():
     checks = {
         "turn_radius_matches_analytic_rel_err_lt_1e-6": worst < 1e-6,
         "bank_within_limit": lim["abs_phi_max_deg"] <= np.rad2deg(vp.phi_limit) + 1e-6,
-        "airspeed_within_limit": lim["V_min_flown"] >= vp.V_min - 1e-6,
+        "airspeed_within_limits": (lim["V_min_flown"] >= vp.V_min - 1e-6
+                                   and lim["V_max_flown"] <= vp.V_max + 1e-6),
+        "gamma_within_limit": lim["abs_gamma_max_deg"] <= np.rad2deg(vp.gamma_max) + 1e-6,
+        "load_factor_within_limit": lim["load_factor_max"] <= vp.load_factor_max + 1e-6,
         "roll_rate_within_limit":
             lim["max_dphi_dt_deg_s"] <= np.rad2deg(vp.p_max) * 1.02,
         "gamma_rate_within_limit":

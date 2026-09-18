@@ -60,7 +60,7 @@ def test_energy_error_is_bounded_not_growing():
     error late in the run is no worse than early in the run."""
     pos, vel, mass, eps2, period, a, mu = _two_body(ecc=0.5)
     g = DirectGravity()
-    dt = period / 600
+    dt = period / 600          # 10 full orbits in 6000 steps
     rel = []
 
     class CB:

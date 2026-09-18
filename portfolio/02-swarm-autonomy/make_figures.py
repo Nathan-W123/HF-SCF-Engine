@@ -100,10 +100,15 @@ def fig_topdown(runs):
     for wp in r.paths:
         ax.plot(wp[:, 0], wp[:, 1], color="#888", lw=0.6, alpha=0.55, zorder=2)
     alt = r.states[0, :, 2]
-    norm = (alt - alt.min()) / max(alt.ptp(), 1e-9)
+    norm = (alt - alt.min()) / max(float(np.ptp(alt)), 1e-9)
     cmap = plt.get_cmap("viridis")
+    dt_log = float(r.t[1] - r.t[0])
     for i in range(r.states.shape[1]):
-        ax.plot(r.states[:, i, 0], r.states[:, i, 1], lw=0.85,
+        # Draw the en-route leg only; vehicles keep flying (and loitering) after
+        # they arrive, which would otherwise bury the goal line in circles.
+        k_end = (len(r.t) if np.isnan(r.reach_time[i])
+                 else int(min(len(r.t), r.reach_time[i] / dt_log + 2)))
+        ax.plot(r.states[:k_end, i, 0], r.states[:k_end, i, 1], lw=0.85,
                 color=cmap(norm[i]), alpha=0.9, zorder=3)
     ax.scatter(r.spec.goals[:, 0], r.spec.goals[:, 1], s=9, marker="s",
                color="#222", zorder=4, label="goals")
@@ -135,13 +140,13 @@ def fig_tracking():
             d, x = z[f"{kind}_{i}"]
             ax.plot(d, x, lw=1.1,
                     color=cmap((off - offsets.min()) /
-                               max(offsets.ptp(), 1e-9)),
+                               max(float(np.ptp(offsets)), 1e-9)),
                     label=f"{off:+.0f} m")
         ax.axhline(0, color="k", lw=0.8)
         ss = res[f"worst_{kind}_steady_state_xte_m"]
         st = res[f"worst_{kind}_settling_distance_m"]
         ax.set_title(f"{title}\nworst settling {st:.0f} m, "
-                     f"worst steady-state |xte| {ss:.2f} m")
+                     f"worst steady-state |xte| {ss:.1e} m")
         ax.set_xlabel("distance flown [m]")
         ax.set_xlim(0, 4000)
     axes[0].set_ylabel("cross-track error [m]")
@@ -237,8 +242,8 @@ def fig_failure(runs):
             label="closest cooperative pair")
     ax.axhline(r.spec.avoid.R_min, color="k", ls="--", lw=1.0)
     ax.axvline(r.spec.fail_time, color="#444", ls="-.", lw=1.0)
-    ax.text(r.spec.fail_time + 2, 1500, "control failure\n+ non-cooperative",
-            fontsize=8, color="#444")
+    ax.text(r.spec.fail_time + 4, 130, "control failure\n+ non-cooperative",
+            fontsize=8, color="#444", ha="left", va="bottom")
     ax.set_yscale("log")
     ax.set_ylabel("separation [m]")
     ax.legend(loc="upper right")

@@ -496,12 +496,47 @@ def _direct(pos, mass, eps2, acc, pot, want_pot):
             pot[i] = G * ph
 
 
+@njit(fastmath=True, cache=True)
+def _direct_serial(pos, mass, eps2, acc, pot, want_pot):
+    """Serial twin of :func:`_direct`, used for small N.
+
+    Launching a ``prange`` kernel costs a thread-pool round trip.  For the
+    two-body Kepler validation that overhead is ~10^4 times the actual work,
+    so below a few hundred particles the serial kernel is far faster.
+    """
+    n = pos.shape[0]
+    for i in range(n):
+        xi = pos[i, 0]; yi = pos[i, 1]; zi = pos[i, 2]
+        ei = eps2[i]
+        ax = 0.0; ay = 0.0; az = 0.0; ph = 0.0
+        for j in range(n):
+            if j == i:
+                continue
+            dx = pos[j, 0] - xi
+            dy = pos[j, 1] - yi
+            dz = pos[j, 2] - zi
+            r2 = dx * dx + dy * dy + dz * dz + ei + eps2[j]
+            inv = 1.0 / np.sqrt(r2)
+            mj = mass[j]
+            w = mj * inv * inv * inv
+            ax += w * dx; ay += w * dy; az += w * dz
+            ph -= mj * inv
+        acc[i, 0] = G * ax; acc[i, 1] = G * ay; acc[i, 2] = G * az
+        if want_pot:
+            pot[i] = G * ph
+
+
+#: below this particle count the serial direct kernel beats the parallel one
+DIRECT_SERIAL_CUTOFF = 400
+
+
 def accel_direct(pos, mass, eps2, want_potential=False):
     """Exact O(N^2) softened acceleration; the Barnes-Hut reference."""
     n = pos.shape[0]
     acc = np.empty((n, 3))
     pot = np.empty(n) if want_potential else np.empty(1)
-    _direct(pos, mass, eps2, acc, pot, bool(want_potential))
+    kernel = _direct_serial if n < DIRECT_SERIAL_CUTOFF else _direct
+    kernel(pos, mass, eps2, acc, pot, bool(want_potential))
     return acc, (pot if want_potential else None)
 
 

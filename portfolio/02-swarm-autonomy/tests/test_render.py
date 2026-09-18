@@ -104,3 +104,63 @@ def test_circle_points_lie_on_the_circle():
     assert p.shape == (64, 3)
     assert np.allclose(np.hypot(p[:, 0] - 10.0, p[:, 1] + 5.0), 250.0)
     assert np.allclose(p[:, 2], 300.0)
+
+
+def test_camera_roll_rotates_the_image_plane():
+    import numpy as np
+    from swarmsim.render import Camera
+    pts = np.array([[0.0, 0.0, 400.0]])
+    a = Camera(eye=[0, -2000, 0], target=[0, 0, 0], roll_deg=0.0)
+    b = Camera(eye=[0, -2000, 0], target=[0, 0, 0], roll_deg=90.0)
+    xa, _, _ = a.project(pts)
+    xb, _, _ = b.project(pts)
+    # a point directly above the target moves to the side under a 90 deg roll
+    assert abs(xa[0, 0] - 960.0) < 1e-6 and xa[0, 1] < 540.0
+    assert abs(xb[0, 1] - 540.0) < 1e-6 and abs(xb[0, 0] - 960.0) > 50.0
+    # roll must not change the depth of any point
+    _, za, _ = a.project(pts)
+    _, zb, _ = b.project(pts)
+    assert za[0] == pytest.approx(zb[0])
+
+
+def test_camera_basis_stays_orthonormal_under_roll():
+    import numpy as np
+    from swarmsim.render import Camera
+    for roll in (0.0, 17.0, 50.0, -33.0):
+        c = Camera(eye=[1200, -900, 700], target=[0, 0, 500], roll_deg=roll)
+        assert np.allclose(c.R @ c.R.T, np.eye(3), atol=1e-12)
+        # rows are (right, up, forward); that triad is left-handed by
+        # construction, which is the usual screen-space convention and is what
+        # the y-flip in Camera.project pairs with.
+        assert np.linalg.det(c.R) == pytest.approx(-1.0, abs=1e-12)
+
+
+def test_altitude_colour_is_monotone_and_cool():
+    import numpy as np
+    from swarmsim.render import altitude_colour
+    lo = altitude_colour(np.array([0.0]))[0]
+    hi = altitude_colour(np.array([1.0]))[0]
+    assert lo[2] > lo[0] and hi[1] > hi[0]      # both cool (blue/cyan dominant)
+    assert hi.sum() > lo.sum()                   # higher altitude is brighter
+
+
+def test_activity_colour_uses_altitude_for_the_base_hue():
+    import numpy as np
+    from swarmsim.render import activity_colour
+    q = np.zeros(2)
+    c = activity_colour(q, altitude=np.array([0.0, 1.0]))
+    assert not np.allclose(c[0], c[1])
+
+
+def test_glyph_mesh_facet_normals_are_varied():
+    import numpy as np
+    from swarmsim.render import _MESH_F, _MESH_V
+    ns = []
+    for idx, _, _ in _MESH_F:
+        p = _MESH_V[list(idx)]
+        n = np.cross(p[1] - p[0], p[2] - p[0])
+        ns.append(n / np.linalg.norm(n))
+    ns = np.array(ns)
+    # at least one near-horizontal (wing) and one near-vertical (fin) facet
+    assert np.abs(ns[:, 2]).max() > 0.9
+    assert np.abs(ns[:, 2]).min() < 0.1

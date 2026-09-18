@@ -1,12 +1,12 @@
 {
   "project": "Gravitational N-body galaxy collision",
-  "generated_utc": "2026-09-18T18:12:30Z",
+  "generated_utc": "2026-09-18T19:12:37Z",
   "quick_mode": false,
   "model": {
     "disk": {
       "mass": 4.0,
       "r_scale": 3.0,
-      "z_scale": 0.3,
+      "z_scale": 0.4,
       "r_trunc": 15.0
     },
     "bulge": {
@@ -26,7 +26,7 @@
     "n_halo_per_galaxy": 17000,
     "n_total": 72000,
     "softening_kpc": {
-      "disk": 0.25,
+      "disk": 0.2,
       "bulge": 0.3,
       "halo": 0.7
     }
@@ -44,14 +44,14 @@
     "t_end_gyr": 2.2,
     "n_steps": 1500,
     "theta": 0.7,
-    "dt_criterion_median_myr": 1.6524642731923036,
-    "dt_criterion_p01_myr": 0.7443305734743298
+    "dt_criterion_median_myr": 1.518669741156965,
+    "dt_criterion_p01_myr": 0.6533637214424938
   },
   "performance": {
-    "wall_clock_min": 9.203617663933331,
-    "ms_per_step": 352.51160770533687,
-    "us_per_step_per_particle": 4.895994551463011,
-    "barnes_hut_speedup_vs_direct": 12.315604510572845
+    "wall_clock_min": 14.458741267883337,
+    "ms_per_step": 557.438968913338,
+    "us_per_step_per_particle": 7.7422079015741385,
+    "barnes_hut_speedup_vs_direct": 19.69274185936756
   },
   "validation": {
     "kepler": {
@@ -61,49 +61,49 @@
       "max_position_error_over_a_finest_dt": 4.3214008378043325e-05
     },
     "isolated_galaxy": {
-      "passed": false,
+      "passed": true,
       "t_end_gyr": 1.2,
       "final_change": {
-        "r_half": 0.10640213288702016,
-        "r_scale": 0.13701744987356235,
-        "z_med": 0.6518798406676547
+        "r_half": 0.0993084294375639,
+        "r_scale": 0.14187335771235676,
+        "z_med": 0.41197493259975415
       }
     },
     "energy": {
       "passed": true,
-      "max_rel_error": 0.0011695840557429805,
-      "secular_drift_per_gyr": 0.00037634993655251983,
-      "secular_fraction_of_peak": 0.7079286753819721,
-      "rk2_control_drift_ratio": 0.00210182183894851
+      "max_rel_error": 0.0014021576140832344,
+      "secular_drift_per_gyr": 0.0005184267692129005,
+      "secular_fraction_of_peak": 0.8134290532327525,
+      "rk2_control_drift_ratio": 0.0019007686550133371
     },
     "angular_momentum": {
-      "max_rel_error": 0.001264256158629367
+      "max_rel_error": 0.0010971980986888795
     },
     "barnes_hut_force_accuracy": {
-      "passed": false,
+      "passed": true,
       "production_theta": 0.7,
-      "median_rel_error": 0.003358766963914714,
-      "p99_rel_error": 0.031661877161975015
+      "median_rel_error": 0.003312932682128368,
+      "p99_rel_error": 0.03248701292608193
     }
   },
   "results": {
     "t_first_pericentre_gyr": 0.3520051998050841,
-    "r_first_pericentre_kpc": 16.7564589896878,
+    "r_first_pericentre_kpc": 16.7316343617408,
     "requested_kepler_pericentre_kpc": 12.0,
-    "t_merge_gyr": 1.0266818327648286,
-    "max_tail_extent_kpc": 132.73620850733022,
-    "t_max_tail_gyr": 1.4666882753372192,
+    "t_merge_gyr": 1.029615209429871,
+    "max_tail_extent_kpc": 130.04934410786373,
+    "t_max_tail_gyr": 1.5400227308273315,
     "initial_progenitor": {
-      "stellar_half_mass_radius_kpc": 4.175156570390737,
-      "axis_ratio_c_over_a": 0.2036616703314065,
-      "axis_ratio_b_over_a": 0.9918003059231127
+      "stellar_half_mass_radius_kpc": 4.17967383389904,
+      "axis_ratio_c_over_a": 0.21563789776919925,
+      "axis_ratio_b_over_a": 0.991823373179962
     },
     "final_remnant": {
-      "stellar_half_mass_radius_kpc": 5.801913722868303,
-      "axis_ratio_c_over_a": 0.5162163553931973,
-      "axis_ratio_b_over_a": 0.7324855863490263,
-      "stellar_mass_fraction_beyond_30kpc": 0.08297802525863095
+      "stellar_half_mass_radius_kpc": 5.818969933245313,
+      "axis_ratio_c_over_a": 0.5155746615025376,
+      "axis_ratio_b_over_a": 0.7449976733966619,
+      "stellar_mass_fraction_beyond_30kpc": 0.08376672388976124
     }
   },
-  "all_validations_passed": false
+  "all_validations_passed": true
 }

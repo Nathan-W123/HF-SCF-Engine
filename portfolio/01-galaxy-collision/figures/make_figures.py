@@ -24,6 +24,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.ticker import FixedFormatter, FixedLocator, NullLocator
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
@@ -66,7 +67,11 @@ def _load_json(name):
 
 def _save(fig, name):
     path = FIGDIR / name
-    fig.savefig(path, bbox_inches="tight", pad_inches=0.25)
+    tight = getattr(fig, "_galcol_tight", True)
+    if tight:
+        fig.savefig(path, bbox_inches="tight", pad_inches=0.25)
+    else:
+        fig.savefig(path)
     plt.close(fig)
     print(f"  wrote {path.relative_to(ROOT)}")
     return path
@@ -92,24 +97,25 @@ def fig_conservation():
 
     ax = axes[0]
     ax.plot(t, rel * 1e3, color=S1)
-    slope = np.polyfit(t, rel, 1)[0]
-    ax.plot(t, (slope * t + np.mean(rel - slope * t)) * 1e3, color=MUTED,
-            lw=1.4, ls="--")
+    half = t.size // 2
+    lslope, lintc = np.polyfit(t[half:], rel[half:], 1)
+    ax.plot(t[half:], (lslope * t[half:] + lintc) * 1e3, color=MUTED,
+            lw=1.5, ls="--")
     _label_end(ax, t[-1], rel[-1] * 1e3, "  total energy", S1)
-    ax.annotate("linear trend", xy=(t[len(t) // 5], (slope * t[len(t) // 5]
-                + np.mean(rel - slope * t)) * 1e3),
-                xytext=(0, -20), textcoords="offset points", color=MUTED,
-                fontsize=10)
     ax.axhline(0, color=MUTED, lw=0.9)
     ax.set_ylabel(r"$\Delta E\,/\,|E_0|$   [$\times 10^{-3}$]")
     ax.set_xlabel("time  [Gyr]")
-    ax.set_title("Energy error is bounded, not secular", loc="left", pad=10)
+    ax.set_title("Energy error steps up at pericentre, then stays put",
+                 loc="left", pad=10)
+    ax.set_ylim(min(-0.15, rel.min() * 1e3 * 1.2), rel.max() * 1e3 * 1.55)
     if cons:
-        ax.text(0.015, 0.06,
+        ed = cons["energy_drift"]
+        ax.text(0.985, 0.05,
                 f"max $|\\Delta E|/|E_0|$ = {cons['energy']['max_rel_error']:.2e}\n"
-                f"linear trend accounts for "
-                f"{100 * cons['energy_drift']['secular_fraction']:.0f}% of it",
-                transform=ax.transAxes, color=INK2, fontsize=9.5, va="bottom")
+                f"drift over the post-merger half: "
+                f"{ed['late_half_drift_per_gyr']:+.1e} per Gyr (dashed)",
+                transform=ax.transAxes, color=INK2, fontsize=9.5,
+                va="bottom", ha="right")
 
     ax = axes[1]
     ax.plot(t, dl * 1e3, color=S3)
@@ -195,8 +201,9 @@ def fig_rotation_curve():
     _label_end(ax, R[-1], np.sqrt(m.bulge.v_circ_sq(R))[-1], "  bulge", S2)
     _label_end(ax, R[-1], np.sqrt(m.halo.v_circ_sq(R))[-1], "  halo", S3)
     _label_end(ax, R[-1], m.v_circ(R)[-1], "  total", INK)
-    _label_end(ax, Rm[ok][-1], vm[ok][-1], "  sampled particles\n  (mean $v_\\phi$)",
-               S4, dy=-8)
+    k4 = min(5, ok.sum() - 1)
+    _label_end(ax, Rm[ok][k4], vm[ok][k4],
+               "sampled particles\n(mean $v_\\phi$)", S4, dx=6, dy=-26)
     ax.set_xlim(0, 24)
     ax.set_ylim(0, 260)
     ax.set_xlabel("cylindrical radius $R$  [kpc]")
@@ -240,7 +247,14 @@ def fig_morphology(epochs=(0.0, 0.42, 0.62, 0.95, 1.30, 2.15), extent=90.0):
     hdr = np.load(DATA / "collision" / "header.npz", allow_pickle=True)
     files = sorted((DATA / "collision").glob("snap_*.npz"))
     times = np.array([float(np.load(f)["t_gyr"]) for f in files])
-    fig, axes = plt.subplots(2, 3, figsize=(13.2, 8.6))
+    fig, axes = plt.subplots(2, 3, figsize=(13.4, 9.2))
+    # one shared stretch for all panels so brightness is comparable between
+    # epochs; the top of the scale is set from the initial (densest) frame
+    ref = np.load(files[0])["star_pos"]
+    h0, _, _ = np.histogram2d(ref[:, 1], ref[:, 0], bins=420,
+                              range=[[-extent, extent], [-extent, extent]])
+    vmin = np.log10(0.6)
+    vmax = float(np.percentile(np.log10(h0[h0 > 0] + 0.6), 99.0))
     for ax, te in zip(axes.ravel(), epochs):
         k = int(np.argmin(np.abs(times - te)))
         pos = np.load(files[k])["star_pos"]
@@ -250,19 +264,20 @@ def fig_morphology(epochs=(0.0, 0.42, 0.62, 0.95, 1.30, 2.15), extent=90.0):
         img = np.log10(h + 0.6)
         ax.imshow(img, origin="lower", cmap=SEQ,
                   extent=[-extent, extent, -extent, extent],
-                  vmin=np.log10(0.6), vmax=max(img.max(), 1.0),
-                  interpolation="bilinear")
+                  vmin=vmin, vmax=vmax, interpolation="bilinear")
         ax.set_xticks([]); ax.set_yticks([])
         ax.grid(False)
         for s in ax.spines.values():
             s.set_visible(False)
         ax.text(0.04, 0.92, f"t = {times[k]:.2f} Gyr", transform=ax.transAxes,
                 color=INK, fontsize=12, fontweight="medium")
+    fig._galcol_tight = False
     axes[1, 0].plot([-80, -80 + 40], [-78, -78], color=INK, lw=2.4)
     axes[1, 0].text(-80, -72, "40 kpc", color=INK, fontsize=10)
     fig.suptitle("Projected stellar surface density (log scale), face-on to the orbital plane",
-                 x=0.012, ha="left", color=INK, fontsize=12.5)
-    fig.subplots_adjust(wspace=0.03, hspace=0.03, top=0.94)
+                 x=0.012, y=0.985, ha="left", color=INK, fontsize=12.5)
+    fig.subplots_adjust(left=0.005, right=0.995, top=0.955, bottom=0.005,
+                        wspace=0.012, hspace=0.012)
     return _save(fig, "fig5_morphology.png")
 
 
@@ -309,6 +324,7 @@ def fig_performance():
     ax.set_ylabel("wall-clock per step  [ms]")
     ax.set_title(f"Cost per step, {meta['n_particles']:,} particles on 4 cores",
                  loc="left", pad=10)
+    ax.set_ylim(0, st.max() * 1e3 * 1.32)
     ax.text(0.97, 0.93, f"mean {1e3 * meta['wall_per_step_s']:.0f} ms\n"
                         f"{meta['n_steps']:,} steps in "
                         f"{meta['wall_clock_s'] / 60:.1f} min",
@@ -317,21 +333,33 @@ def fig_performance():
 
     ax = axes[1]
     ok = np.isfinite(t_direct)
-    ax.plot(ns, t_tree, color=S1, marker="o", ms=5)
-    ax.plot(ns[ok], t_direct[ok], color=S2, marker="o", ms=5)
-    ref = t_tree[0] * (ns / ns[0]) * np.log2(ns / ns[0] + 2) / np.log2(2)
-    ax.plot(ns, ref, color=MUTED, lw=1.3, ls="--")
-    ax.plot(ns[ok], t_direct[ok][0] * (ns[ok] / ns[ok][0]) ** 2, color=MUTED,
-            lw=1.3, ls=":")
+    # reference slopes, each anchored to the largest measured point of its own
+    # curve so the comparison is "does the data follow this slope", not
+    # "where did the author put the line"
+    ref_nlogn = t_tree[-1] * (ns / ns[-1]) * (np.log(ns) / np.log(ns[-1]))
+    ref_n2 = t_direct[ok][-1] * (ns / ns[ok][-1]) ** 2
+    ax.plot(ns, ref_nlogn, color=MUTED, lw=1.2, ls="--", zorder=1)
+    ax.plot(ns, ref_n2, color=MUTED, lw=1.2, ls=":", zorder=1)
+    ax.plot(ns, t_tree, color=S1, marker="o", ms=5, zorder=3)
+    ax.plot(ns[ok], t_direct[ok], color=S2, marker="o", ms=5, zorder=3)
     _label_end(ax, ns[-1], t_tree[-1], "  Barnes–Hut", S1)
     _label_end(ax, ns[ok][-1], t_direct[ok][-1], "  direct $O(N^2)$", S2)
-    ax.annotate(r"$\propto N\log N$", xy=(ns[-1], ref[-1]), xytext=(4, -14),
+    ax.annotate(r"$\propto N\log N$", xy=(ns[2], ref_nlogn[2]), xytext=(10, -16),
+                textcoords="offset points", color=MUTED, fontsize=9.5)
+    ax.annotate(r"$\propto N^2$", xy=(ns[1], ref_n2[1]), xytext=(-40, 6),
                 textcoords="offset points", color=MUTED, fontsize=9.5)
     ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlim(ns[0] * 0.72, ns[-1] * 1.8)
+    ax.set_ylim(min(t_tree.min(), np.nanmin(t_direct)) * 0.45,
+                max(t_tree.max(), np.nanmax(t_direct)) * 3.2)
+    ax.xaxis.set_major_locator(FixedLocator(list(ns)))
+    ax.xaxis.set_major_formatter(FixedFormatter(
+        [f"{n / 1000:.0f}k" if n >= 1000 else f"{int(n)}" for n in ns]))
+    ax.xaxis.set_minor_locator(NullLocator())
     ax.set_xlabel("particle number  $N$")
     ax.set_ylabel("one force evaluation  [s]")
     ax.set_title(r"Measured scaling at $\theta = 0.7$", loc="left", pad=10)
-    fig.subplots_adjust(wspace=0.34)
+    fig.subplots_adjust(wspace=0.32)
     return _save(fig, "fig6_performance.png")
 
 

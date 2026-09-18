@@ -32,7 +32,7 @@ class Camera:
     """Right-handed pinhole camera with a look-at basis."""
 
     def __init__(self, eye, target, up=(0.0, 0.0, 1.0), fov_deg=38.0,
-                 width=1920, height=1080):
+                 width=1920, height=1080, roll_deg=0.0):
         self.eye = np.asarray(eye, float)
         self.target = np.asarray(target, float)
         up = np.asarray(up, float)
@@ -45,6 +45,11 @@ class Camera:
             nr = 1.0
         r = r / nr
         u = np.cross(r, f)
+        if roll_deg:
+            # Roll about the optical axis (a canted / Dutch-angle camera).
+            c, sn = np.cos(np.deg2rad(roll_deg)), np.sin(np.deg2rad(roll_deg))
+            r, u = c * r + sn * u, -sn * r + c * u
+        self.roll_deg = float(roll_deg)
         self.R = np.stack([r, u, f])          # world -> camera rows
         self.W, self.H = int(width), int(height)
         self.fov = np.deg2rad(fov_deg)
@@ -178,34 +183,59 @@ def activity_colour(q, altitude=None):
 # Aircraft glyph
 # --------------------------------------------------------------------------
 def _glyph_mesh(scale=1.0):
-    """A delta-wing planform + fin, in body axes.
+    """A swept-wing aircraft silhouette in body axes.
 
     Body axes are right-handed with x forward, y to the **left** and z up
     (forward x left = up), which is the handedness that pairs with the ENU world
     frame without an extra reflection.
 
-    Returns (vertices (V,3), facets [(indices, shade_weight, is_emissive)]).
+    The mesh is deliberately made of facets whose normals point in genuinely
+    different directions -- near-horizontal wings and tailplane, a vertical fin,
+    angled fuselage flanks -- because flat-shading those against a fixed key
+    light is what makes the vehicle read as a solid object, and what makes bank
+    angle legible: as the aircraft rolls, the wing facets swing through the
+    light while the fin does the opposite.
+
+    Returns (vertices (V,3), facets [(indices, albedo, kind)]) where ``kind`` is
+    0 for a lit surface and 1 for an emissive one.
     """
-    L = 1.0 * scale
-    b = 0.78 * scale
+    L = scale
     v = np.array([
-        [1.00 * L, 0.0, 0.0],        # 0 nose
-        [-0.45 * L, -b, -0.02 * L],  # 1 right wingtip
-        [-0.22 * L, 0.0, 0.0],       # 2 wing root trailing
-        [-0.45 * L, b, -0.02 * L],   # 3 left wingtip
-        [-0.52 * L, 0.0, 0.34 * L],  # 4 fin top
-        [-0.20 * L, 0.0, 0.0],       # 5 fin base fwd
-        [0.55 * L, 0.0, 0.05 * L],   # 6 canopy fwd
-        [-0.05 * L, -0.11 * b, 0.10 * L],   # 7 canopy right
-        [-0.05 * L, 0.11 * b, 0.10 * L],    # 8 canopy left
+        [1.15 * L, 0.00, 0.000],      # 0  nose
+        [0.10 * L, 0.00, 0.115],      # 1  fuselage spine (top)
+        [0.10 * L, 0.00, -0.085],     # 2  fuselage keel (bottom)
+        [-0.92 * L, 0.00, 0.020],     # 3  tail cone
+        [0.20 * L, 0.00, 0.000],      # 4  wing root, forward
+        [-0.34 * L, 0.00, 0.000],     # 5  wing root, aft
+        [-0.20 * L, 0.95, 0.055],     # 6  left wingtip (swept, dihedral)
+        [-0.20 * L, -0.95, 0.055],    # 7  right wingtip
+        [-0.50 * L, 0.58, 0.030],     # 8  left trailing edge
+        [-0.50 * L, -0.58, 0.030],    # 9  right trailing edge
+        [-0.74 * L, 0.36, 0.045],     # 10 left tailplane tip
+        [-0.74 * L, -0.36, 0.045],    # 11 right tailplane tip
+        [-0.95 * L, 0.00, 0.045],     # 12 tailplane apex
+        [-0.86 * L, 0.00, 0.400],     # 13 fin top
+        [-0.48 * L, 0.00, 0.040],     # 14 fin base
+        [0.48 * L, 0.00, 0.085],      # 15 canopy forward
+        [0.02 * L, 0.00, 0.105],      # 16 canopy aft
+        [-0.88 * L, 0.00, 0.020],     # 17 exhaust point
     ], dtype=np.float32)
     facets = [
-        ((0, 1, 2), 1.00, False),    # right wing
-        ((0, 2, 3), 0.86, False),    # left wing
-        ((5, 4, 2), 0.65, False),    # fin
-        ((6, 7, 8), 1.0, True),      # canopy / emissive spine
+        ((0, 6, 5), 1.00, 0),      # left wing, forward panel
+        ((6, 8, 5), 0.88, 0),      # left wing, aft panel
+        ((0, 5, 7), 0.94, 0),      # right wing, forward panel
+        ((7, 5, 9), 0.82, 0),      # right wing, aft panel
+        ((0, 1, 3), 0.72, 0),      # fuselage upper spine
+        ((0, 2, 3), 0.46, 0),      # fuselage keel
+        ((3, 10, 12), 0.66, 0),    # left tailplane
+        ((3, 12, 11), 0.60, 0),    # right tailplane
+        ((14, 13, 3), 0.78, 0),    # fin
+        ((15, 16, 1), 1.00, 1),    # canopy (emissive)
     ]
     return v, facets
+
+
+EXHAUST_INDEX = 17      # vertex carrying the hot engine point
 
 
 _MESH_V, _MESH_F = _glyph_mesh()

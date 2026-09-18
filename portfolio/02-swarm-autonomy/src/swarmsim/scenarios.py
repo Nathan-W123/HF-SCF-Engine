@@ -21,10 +21,9 @@ Four scenarios plus a hero-rendering variant:
              spirals through the swarm while the others must deconflict around
              an agent that does not reciprocate.
 
-``hero``     A rotational exchange: 40 vehicles on a 2.6 km ring, each assigned
-             the goal 165 degrees around, through a no-fly-zone field with a
-             320 m cylinder on the centre point and five satellites.  Used for
-             the hero render, and measured with the same metrics as the rest.
+``hero``     The ``swap`` stress test with an undecimated state log, used for
+             the hero render.  The hero visual is therefore a picture of the
+             same run the safety invariant is asserted on.
 """
 
 from __future__ import annotations
@@ -126,52 +125,24 @@ def failure(n=36, seed=0, t_max=290.0, name="failure") -> SwarmSpec:
                 fail_bank=np.deg2rad(15.0))
 
 
-def hero(n=40, seed=5, t_max=330.0) -> SwarmSpec:
-    """Rotational exchange through a no-fly-zone field -- the hero render.
+def hero(n=36, seed=0, t_max=290.0) -> SwarmSpec:
+    """The hero render: the validated high-density stress test itself.
 
-    Forty vehicles start on a 2.6 km ring and are each assigned the goal 165
-    degrees around it, so every route is a long chord across the middle and the
-    whole swarm shares a rotational sense.  A 320 m no-fly cylinder sits on the
-    centre point with five satellites around it, so the traffic has to split and
-    weave rather than fly straight through, and the tangent arcs around those
-    cylinders are tight enough to need real bank (95th-percentile bank angle
-    through the field is about 15 degrees).
+    This is exactly :func:`swap` -- the 36-vehicle antipodal exchange that
+    validation 3 asserts the safety invariant on -- with the state log left
+    undecimated so the rendered flight trails are smooth.  Nothing about the
+    dynamics, the guidance, the avoidance or the scenario differs, so the hero
+    image and video are pictures of the run whose numbers are in the README.
 
-    It is a genuine scenario run through the identical pipeline and measured
-    with the same metrics as the rest -- not a rendering special case.
+    The moment worth rendering is the conflict-resolution burst around
+    t = 80 s: every vehicle's nominal route passes through one common point, so
+    the whole swarm arrives there at once, banks hard to open separation, and
+    then re-forms on the far side.  Mean bank angle peaks near 15 degrees with a
+    95th percentile above 40, and the mean avoidance deflection peaks near
+    18 m/s -- which is why the coordination reads in the picture.
     """
-    rng = np.random.default_rng(3005)
-    R = 2600.0
-    th = np.linspace(0.0, 2 * np.pi, n, endpoint=False) + rng.uniform(-0.01, 0.01, n)
-    rot = np.deg2rad(165.0)
-    # A deliberately tight altitude band (600-1120 m, ~13 m per vehicle): the
-    # swarm is close to co-altitude, so the deconfliction that happens is
-    # genuinely horizontal rather than hidden in vertical stratification.
-    base = np.linspace(600.0, 1120.0, n)
-    alt = base[rng.permutation(n)]
-    starts = np.stack([R * np.cos(th), R * np.sin(th), alt], axis=1)
-    goals = np.stack([R * np.cos(th + rot), R * np.sin(th + rot), alt], axis=1)
-
-    zones = [NoFlyZone(0.0, 0.0, 320.0, 0.0, 2200.0)]
-    for ang, rad in zip(np.deg2rad([18.0, 90.0, 162.0, 234.0, 306.0]),
-                        [280.0, 250.0, 300.0, 260.0, 270.0]):
-        zones.append(NoFlyZone(1450.0 * np.cos(ang), 1450.0 * np.sin(ang), rad,
-                               0.0, 2200.0))
-
-    return SwarmSpec(
-        name="hero",
-        starts=starts,
-        goals=goals,
-        zones=zones,
-        wind=WindParams(mean=(-4.0, 2.5, 0.0),
-                        dryden=DrydenParams().scaled(1.2),
-                        turbulence_on=True),
-        sim=SimParams(t_max=t_max, seed=seed, log_every=1),
-        vehicle=VehicleParams(),
-        guidance=GuidanceParams(),
-        avoid=AvoidanceParams(),
-        clearance=70.0,
-    )
+    spec = swap(n=n, seed=seed, t_max=t_max, name="hero", log_every=1)
+    return spec
 
 
 ALL = {

@@ -3,10 +3,10 @@
   "all_passed": true,
   "checks": {
     "circle_all_releases_settle": true,
-    "circle_steady_state_xte_lt_6m": true,
+    "circle_steady_state_xte_lt_0.05m": true,
     "no_divergence": true,
     "straight_all_releases_settle": true,
-    "straight_steady_state_xte_lt_2m": true
+    "straight_steady_state_xte_lt_0.01m": true
   },
   "circle": [
     {

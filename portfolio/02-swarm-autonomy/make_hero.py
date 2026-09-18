@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.join(HERE, "src"))
 
 from swarmsim import scenarios, sim                                   # noqa: E402
 from swarmsim.render import (Camera, activity_colour, attitude_matrix,  # noqa: E402
-                             circle_points, splat, tonemap, _MESH_F, _MESH_V)
+                             splat, tonemap, EXHAUST_INDEX, _MESH_F, _MESH_V)
 
 W, H = 1920, 1080
 FPS = 30
@@ -33,17 +33,21 @@ CACHE = os.path.join(HERE, "results", "hero_run.pkl")
 MEDIA = os.path.join(HERE, "media")
 
 # ---- look ---------------------------------------------------------------
-TRAIL_SECONDS = 46.0        # how much flight history the glow buffer holds
-TRAIL_GAIN = 0.52           # energy per trail sample
-TRAIL_SUBSTEPS = 4          # interpolation between logged samples (smooth lines)
-TRAIL_SIGMA = 1.7          # px, widens 1-px threads into ribbons
-GLYPH_SCALE_M = 74.0       # glyph span in metres (a readable exaggeration)
-GLYPH_GAIN = 1.30
-HALO_GAIN = 0.34
-ZONE_GAIN = 0.30
-FOG_SCALE = 2700.0          # atmospheric extinction e-folding distance [m]
-SKY = np.array([0.0045, 0.0085, 0.020], np.float32)
-EXPOSURE = 1.30
+TRAIL_SECONDS = 30.0        # how much flight history the glow buffer holds
+TRAIL_SUBSTEPS = 5          # interpolation between logged samples (smooth lines)
+TRAIL_SPLIT = 0.34          # fraction of the history rendered as the thick core
+TRAIL_CORE_GAIN = 1.25      # energy per sample in the fresh, thick part
+TRAIL_CORE_SIGMA = 2.6      # px
+TRAIL_WISP_GAIN = 0.30      # energy per sample in the old, thin part
+TRAIL_WISP_SIGMA = 0.9      # px
+GLYPH_SCALE_M = 72.0       # glyph half-span in metres (a readable exaggeration)
+GLYPH_GAIN = 1.75
+EXHAUST_GAIN = 2.6          # hot engine point -- one bright pixel per vehicle
+ZONE_GAIN = 0.105           # volumetric haze column brightness
+ZONE_POINTS = 9000          # haze samples per cylinder
+FOG_SCALE = 2600.0          # atmospheric extinction e-folding distance [m]
+SKY = np.array([0.0026, 0.0048, 0.0125], np.float32)
+EXPOSURE = 1.42
 
 
 # =========================================================================
@@ -102,32 +106,39 @@ class HeroScene:
         self.zones = res.spec.zones
         self.goals = res.spec.goals
 
-        # Pre-build the no-fly cylinder geometry (rims + a few verticals), drawn
-        # over the altitude band the swarm actually occupies.
-        z_lo = float(self.S[:, :, 2].min()) - 90.0
-        z_hi = float(self.S[:, :, 2].max()) + 90.0
+        # ---- no-fly zones as volumetric haze columns -----------------
+        # Wireframe rings read as a CAD drawing.  Instead each cylinder is a
+        # cloud of points scattered over its lateral surface, weighted to be
+        # densest near the base and to fall off with height, with the silhouette
+        # limb brightened at render time.  After bloom that reads as a soft
+        # column of haze sitting behind the traffic.
+        z_lo = float(self.S[:, :, 2].min()) - 260.0
+        z_hi = float(self.S[:, :, 2].max()) + 120.0
         self.z_band = (z_lo, z_hi)
+        rng = np.random.default_rng(17)
         self.zone_pts = []
         self.zone_w = []
+        self.zone_n = []
         for z in self.zones:
-            # Sample densely enough that a rim is a continuous glowing line on
-            # screen rather than a dotted ellipse.
-            nring = 1400
-            rings = [(circle_points(z.x, z.y, z_lo, z.radius, nring), 1.0),
-                     (circle_points(z.x, z.y, z_hi, z.radius, nring), 0.62),
-                     (circle_points(z.x, z.y, 0.5 * (z_lo + z_hi), z.radius, nring), 0.20)]
-            nv = 150
-            verts = []
-            for a in np.linspace(0, 2 * np.pi, 16, endpoint=False):
-                zs = np.linspace(z_lo, z_hi, nv)
-                verts.append(np.stack([np.full(nv, z.x + z.radius * np.cos(a)),
-                                       np.full(nv, z.y + z.radius * np.sin(a)),
-                                       zs], axis=1))
-            pts = np.vstack([r[0] for r in rings] + verts)
-            wts = np.concatenate([np.full(len(r[0]), r[1]) for r in rings]
-                                 + [np.full(nv, 0.13)] * 16)
-            self.zone_pts.append(pts)
-            self.zone_w.append(wts)
+            m = ZONE_POINTS
+            a = rng.uniform(0.0, 2 * np.pi, m)
+            u = rng.random(m)
+            hh = z_lo + (z_hi - z_lo) * u ** 2.0          # crowd toward the base
+            pts = np.stack([z.x + z.radius * np.cos(a),
+                            z.y + z.radius * np.sin(a), hh], axis=1)
+            nrm = np.stack([np.cos(a), np.sin(a), np.zeros(m)], axis=1)
+            frac = (hh - z_lo) / max(z_hi - z_lo, 1e-6)
+            w = np.exp(-2.6 * frac)
+            # a brighter base ring, drawn as a narrow band rather than a line
+            ring = rng.random(m // 3)
+            ar = rng.uniform(0.0, 2 * np.pi, m // 3)
+            hr = z_lo + 42.0 * ring
+            rpts = np.stack([z.x + z.radius * np.cos(ar),
+                             z.y + z.radius * np.sin(ar), hr], axis=1)
+            rnrm = np.stack([np.cos(ar), np.sin(ar), np.zeros(m // 3)], axis=1)
+            self.zone_pts.append(np.vstack([pts, rpts]))
+            self.zone_n.append(np.vstack([nrm, rnrm]))
+            self.zone_w.append(np.concatenate([w, np.full(m // 3, 2.1)]))
 
     # -- trails ---------------------------------------------------------
     def trail_samples(self, k):
@@ -159,22 +170,32 @@ class HeroScene:
         yy = np.linspace(0.0, 1.0, H, dtype=np.float32)[:, None]
         buf += SKY[None, None, :] * (0.10 + 1.0 * yy ** 2.4)[:, :, None]
 
-        # ---------------- no-fly cylinders ----------------------------
-        for pts, wts in zip(self.zone_pts, self.zone_w):
-            xy, z, vis = cam.project(pts)
-            if not vis.any():
-                continue
-            fog = np.exp(-np.maximum(z, 0.0) / FOG_SCALE)
-            rgb = np.tile(np.array([0.26, 0.50, 0.92], np.float32), (len(pts), 1))
-            wgt = (wts * fog * ZONE_GAIN * vis).astype(np.float32)
-            splat(buf, xy[:, 0], xy[:, 1], rgb, wgt)
+        # ---------------- no-fly zones: volumetric haze ---------------
+        if self.zone_pts:
+            from scipy.ndimage import gaussian_filter
+            view = cam.R[2]
+            haze = np.zeros_like(buf)
+            for pts, wts, nrm in zip(self.zone_pts, self.zone_w, self.zone_n):
+                xy, z, vis = cam.project(pts)
+                if not vis.any():
+                    continue
+                fog = np.exp(-np.maximum(z, 0.0) / FOG_SCALE)
+                # Limb brightening: a surface seen edge-on has more haze along
+                # the line of sight, which is what makes a column look like a
+                # volume instead of a wire cage.
+                limb = (1.0 - np.abs(nrm @ view)) ** 3.0
+                rgb = np.tile(np.array([0.22, 0.44, 0.95], np.float32), (len(pts), 1))
+                wgt = (wts * limb * fog * ZONE_GAIN * vis).astype(np.float32)
+                splat(haze, xy[:, 0], xy[:, 1], rgb, wgt)
+            # Blur hard: individual samples must never read as speckle.
+            buf += gaussian_filter(haze, sigma=(7.0, 7.0, 0))
 
         # ---------------- goal markers --------------------------------
         gp = self.goals
         xy, z, vis = cam.project(gp)
         fog = np.exp(-np.maximum(z, 0.0) / FOG_SCALE)
-        rgb = np.tile(np.array([0.98, 0.74, 0.30], np.float32), (len(gp), 1))
-        splat(buf, xy[:, 0], xy[:, 1], rgb, (1.1 * fog * vis).astype(np.float32))
+        rgb = np.tile(np.array([1.00, 0.66, 0.24], np.float32), (len(gp), 1))
+        splat(buf, xy[:, 0], xy[:, 1], rgb, (0.75 * fog * vis).astype(np.float32))
 
         # ---------------- trails --------------------------------------
         tr = self.trail_samples(k)
@@ -183,14 +204,27 @@ class HeroScene:
             flat = pts.reshape(-1, 3)
             xy, z, vis = cam.project(flat)
             fog = np.exp(-np.maximum(z, 0.0) / FOG_SCALE)
-            fade = ((1.0 - age) ** 1.7).repeat(self.N, axis=1).reshape(-1)
-            wgt = (TRAIL_GAIN * fade * fog * vis).astype(np.float32)
-            trail = np.zeros_like(buf)
-            splat(trail, xy[:, 0], xy[:, 1],
-                  cols.reshape(-1, 3).astype(np.float32), wgt)
-            # soften into ribbons rather than 1-pixel threads
+            # Tapered trail: the fresh third is splatted with high energy and
+            # blurred wide (a thick bright ribbon just behind the vehicle); the
+            # older history is splatted with low energy and blurred narrow, so
+            # the stroke thins and dims with age instead of being a uniform
+            # thread.
+            newness = (1.0 - age).repeat(self.N, axis=1).reshape(-1)
+            c_flat = cols.reshape(-1, 3).astype(np.float32)
             from scipy.ndimage import gaussian_filter
-            buf += gaussian_filter(trail, sigma=(TRAIL_SIGMA, TRAIL_SIGMA, 0))
+            core_m = newness >= (1.0 - TRAIL_SPLIT)
+            wisp_m = ~core_m
+            for m_, gain, sigma, power in ((core_m, TRAIL_CORE_GAIN,
+                                            TRAIL_CORE_SIGMA, 2.6),
+                                           (wisp_m, TRAIL_WISP_GAIN,
+                                            TRAIL_WISP_SIGMA, 1.5)):
+                if not m_.any():
+                    continue
+                f = newness[m_] ** power
+                w_ = (gain * f * fog[m_] * vis[m_]).astype(np.float32)
+                lay = np.zeros_like(buf)
+                splat(lay, xy[m_, 0], xy[m_, 1], c_flat[m_], w_)
+                buf += gaussian_filter(lay, sigma=(sigma, sigma, 0))
 
         # ---------------- aircraft glyphs -----------------------------
         self._draw_aircraft(buf, k, cam)
@@ -198,6 +232,7 @@ class HeroScene:
         return tonemap(buf, exposure=exposure)
 
     def _draw_aircraft(self, buf, k, cam):
+        """Rasterise each vehicle as a shaded, depth-sorted 3-D glyph."""
         s = self.S[k]
         pos = s[:, :3]
         psi, gam, phi = s[:, 4], s[:, 5], s[:, 6]
@@ -216,13 +251,13 @@ class HeroScene:
 
         img = Image.new("RGB", (W, H), (0, 0, 0))
         dr = ImageDraw.Draw(img)
-        # a fixed key-light direction, so the bank angle reads as shading
-        key = np.array([0.42, 0.36, 0.83])
-        key = key / np.linalg.norm(key)
+        # Fixed key light, high and off to one side: as an aircraft banks, its
+        # wing facets swing through this direction and the bank angle reads.
+        key = np.array([0.46, 0.30, 0.84])
+        key /= np.linalg.norm(key)
+        view = cam.R[2]
 
-        halo_xy = []
-        halo_rgb = []
-        halo_w = []
+        hot_xy, hot_rgb, hot_w = [], [], []
 
         for i in order:
             if not vctr[i] or zctr[i] < 1.0:
@@ -230,45 +265,57 @@ class HeroScene:
             if not visc[i].all():
                 continue
             px = xy[i]
-            # cull tiny / off-screen glyphs early
-            if (px[:, 0].max() < -60 or px[:, 0].min() > W + 60
-                    or px[:, 1].max() < -60 or px[:, 1].min() > H + 60):
+            if (px[:, 0].max() < -80 or px[:, 0].min() > W + 80
+                    or px[:, 1].max() < -80 or px[:, 1].min() > H + 80):
                 continue
             fog = float(np.exp(-max(zctr[i], 0.0) / FOG_SCALE))
             base = self.col[k, i]
-            for idx, shade, emissive in _MESH_F:
-                p = verts[i, list(idx)]
-                nrm = np.cross(p[1] - p[0], p[2] - p[0])
+
+            # ---- depth-sort this aircraft's own facets ----------------
+            faces = []
+            for idx, albedo, kind in _MESH_F:
+                p3 = verts[i, list(idx)]
+                nrm = np.cross(p3[1] - p3[0], p3[2] - p3[0])
                 nl = np.linalg.norm(nrm)
                 if nl < 1e-9:
                     continue
-                nrm = nrm / nl
-                lam = abs(float(nrm @ key))
-                if emissive:
-                    c = np.clip(base * 1.0 + 0.22, 0, 1) * 255.0 * fog
+                nrm /= nl
+                depth = float(np.mean(zc[i, list(idx)]))
+                faces.append((depth, idx, albedo, kind, nrm))
+            faces.sort(key=lambda f: -f[0])
+
+            for _, idx, albedo, kind, nrm in faces:
+                if kind == 1:
+                    c = np.clip(base * 0.85 + 0.35, 0, 1) * 255.0 * fog
                 else:
-                    c = base * (0.06 + 1.30 * lam ** 1.35) * shade * 255.0 * fog
-                poly = [tuple(px[j]) for j in idx]
-                dr.polygon(poly, fill=tuple(int(v) for v in np.clip(c, 0, 255)))
-            # bright leading-edge outline: this is what makes the shape read
-            outline = np.clip(base * 1.45 + 0.10, 0, 1) * 255.0 * fog
-            oc = tuple(int(v) for v in np.clip(outline, 0, 255))
-            for a, b in ((1, 0), (0, 3)):
-                dr.line([tuple(px[a]), tuple(px[b])], fill=oc, width=2)
+                    lam = abs(float(nrm @ key))
+                    rim = (1.0 - abs(float(nrm @ view))) ** 2.5
+                    shade = 0.045 + 0.90 * lam ** 1.35 + 0.22 * rim
+                    c = np.clip(base * shade * albedo, 0, 1.0) * 255.0 * fog
+                dr.polygon([tuple(px[j]) for j in idx],
+                           fill=tuple(int(v) for v in np.clip(c, 0, 255)))
 
-            # additive halo so bloom picks the vehicle out of the background
-            span = float(np.linalg.norm(px[1] - px[3]))
-            halo_xy.append(px[0])
-            halo_rgb.append(np.clip(base * 1.15, 0, 1))
-            halo_w.append(HALO_GAIN * fog * np.clip(span / 26.0, 0.20, 2.2))
+            # Bright leading edges: the wing planform is what says "aircraft".
+            span = float(np.linalg.norm(px[6] - px[7]))
+            lw = 2 if span > 26 else 1
+            edge = np.clip(base * 1.25 + 0.06, 0, 1) * 255.0 * fog
+            ec = tuple(int(v) for v in np.clip(edge, 0, 255))
+            for a, b in ((6, 0), (0, 7), (14, 13), (3, 12)):
+                dr.line([tuple(px[a]), tuple(px[b])], fill=ec, width=lw)
 
-        arr = np.asarray(img, dtype=np.float32) / 255.0
-        buf += arr * GLYPH_GAIN
+            # One hot engine point per vehicle: a single small, very bright
+            # source is what makes each aircraft pop out of the dark after
+            # bloom, rather than a soft halo that just fogs the frame.
+            hot_xy.append(px[EXHAUST_INDEX])
+            hot_rgb.append(np.clip(base * 0.55 + 0.62, 0, 1))
+            hot_w.append(EXHAUST_GAIN * fog * float(np.clip(span / 40.0, 0.18, 1.5)))
 
-        if halo_xy:
-            hxy = np.array(halo_xy)
+        buf += (np.asarray(img, dtype=np.float32) / 255.0) * GLYPH_GAIN
+
+        if hot_xy:
+            hxy = np.array(hot_xy)
             splat(buf, hxy[:, 0], hxy[:, 1],
-                  np.array(halo_rgb, np.float32), np.array(halo_w, np.float32))
+                  np.array(hot_rgb, np.float32), np.array(hot_w, np.float32))
 
 
 # =========================================================================
@@ -276,9 +323,11 @@ class HeroScene:
 # =========================================================================
 # Camera path parameters (baked-in defaults; overridable from the CLI while
 # framing).  The shot is a slow orbit with a gentle dolly-in.
-CAM = dict(az0=-126.0, az_sweep=58.0, elev0=9.5, elev_lift=7.0,
-           fov0=40.0, fov_zoom=3.5, frame=0.98, dolly=0.10,
-           rad_min=1100.0, rad_max=4200.0, focus_mix=0.55, focus_z=880.0)
+CAM = dict(az0=20.0, az_sweep=26.0, elev0=26.0, elev_lift=5.0,
+           fov0=42.0, fov_zoom=3.0, frame=1.22, dolly=0.08,
+           rad_min=1500.0, rad_max=5200.0, focus_mix=0.55, focus_z=860.0,
+           roll0=50.0, roll_drift=-7.0, shift_r=-0.07, shift_u=-0.02,
+           span_min=2700.0, span_max=5000.0, clear=620.0)
 
 
 def camera_at(scene, u, k, cam=None):
@@ -299,7 +348,7 @@ def camera_at(scene, u, k, cam=None):
                       0.45 * centroid[2] + 0.55 * c["focus_z"]])
 
     span = float(np.percentile(np.linalg.norm(S[:, :2] - focus[None, :2], axis=1), 88))
-    span = float(np.clip(2.0 * span, 2100.0, 4300.0))
+    span = float(np.clip(2.0 * span, c["span_min"], c["span_max"]))
 
     az = np.deg2rad(c["az0"] + c["az_sweep"] * u)
     e = u * u * (3.0 - 2.0 * u)                       # smoothstep ease
@@ -309,11 +358,25 @@ def camera_at(scene, u, k, cam=None):
     fov_h = 2.0 * np.arctan(np.tan(np.deg2rad(fov) * 0.5) * W / H)
     rad = 0.5 * span / np.tan(0.5 * fov_h * c["frame"])
     rad = float(np.clip(rad, c["rad_min"], c["rad_max"])) * (1.0 - c["dolly"] * e)
+    # Never let the orbit pass through the swarm: stay clear of the furthest
+    # vehicle by a fixed margin.
+    far = float(np.max(np.linalg.norm(S[:, :3] - focus[None, :], axis=1)))
+    rad = max(rad, far + c["clear"])
+
+    # Nudge the subject off dead centre (fractions of the framed span).
+    right = np.array([-np.sin(az), np.cos(az), 0.0])
+    focus = focus + c["shift_r"] * span * right + np.array(
+        [0.0, 0.0, c["shift_u"] * span])
 
     eye = focus + np.array([rad * np.cos(elev) * np.cos(az),
                             rad * np.cos(elev) * np.sin(az),
                             rad * np.sin(elev)])
-    return Camera(eye, focus, up=(0, 0, 1), fov_deg=fov, width=W, height=H)
+    # A canted camera: the swarm stacks vertically (the altitude band is far
+    # deeper than its horizontal extent at the conflict), so rolling the camera
+    # lays that column across the frame diagonally instead of down the middle.
+    roll = c["roll0"] + c["roll_drift"] * u
+    return Camera(eye, focus, up=(0, 0, 1), fov_deg=fov, width=W, height=H,
+                  roll_deg=roll)
 
 
 # =========================================================================
@@ -339,12 +402,12 @@ def _work(n):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--still-only", action="store_true")
-    ap.add_argument("--seconds", type=float, default=20.0)
+    ap.add_argument("--seconds", type=float, default=22.0)
     ap.add_argument("--speed", type=float, default=3.0,
                     help="simulated seconds per rendered second")
-    ap.add_argument("--start", type=float, default=52.0,
+    ap.add_argument("--start", type=float, default=60.0,
                     help="simulation time at the first frame [s]")
-    ap.add_argument("--still-u", type=float, default=0.66)
+    ap.add_argument("--still-u", type=float, default=0.515)
     ap.add_argument("--exposure", type=float, default=EXPOSURE)
     ap.add_argument("--force-sim", action="store_true")
     ap.add_argument("--cam", type=str, default="",

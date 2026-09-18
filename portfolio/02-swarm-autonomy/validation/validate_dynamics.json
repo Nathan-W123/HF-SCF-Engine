@@ -2,9 +2,11 @@
   "all_passed": true,
   "checks": {
     "accel_within_limit": true,
-    "airspeed_within_limit": true,
+    "airspeed_within_limits": true,
     "bank_within_limit": true,
     "gamma_rate_within_limit": true,
+    "gamma_within_limit": true,
+    "load_factor_within_limit": true,
     "rk4_order_between_3.7_and_4.3": true,
     "roll_rate_within_limit": true,
     "turn_radius_matches_analytic_rel_err_lt_1e-6": true
@@ -32,12 +34,21 @@
   },
   "description": "Coordinated-turn radius, envelope limits, RK4 order.",
   "limits": {
-    "V_min_flown": 32.99999999999983,
+    "V_max_flown": 34.0,
+    "V_min_flown": 18.0,
+    "abs_gamma_max_deg": 12.000000000000002,
     "abs_phi_max_deg": 45.0,
+    "limit_V_mps": [
+      18.0,
+      34.0
+    ],
     "limit_accel_max": 2.0,
+    "limit_gamma_deg": 12.000000000000002,
     "limit_gamma_dot_deg_s": 8.0,
+    "limit_load_factor": 1.6,
     "limit_p_max_deg_s": 59.99999999999999,
     "limit_phi_deg": 45.0,
+    "load_factor_max": 1.414213562373095,
     "max_dV_dt": 1.9999999999999574,
     "max_dgamma_dt_deg_s": 8.00000000000002,
     "max_dphi_dt_deg_s": 60.000000000000085

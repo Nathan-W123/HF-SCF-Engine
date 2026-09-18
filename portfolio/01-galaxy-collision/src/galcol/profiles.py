@@ -42,7 +42,7 @@ class ExponentialDisk:
 
     mass: float = 4.0        # 4e10 Msun
     r_scale: float = 3.0     # kpc
-    z_scale: float = 0.3     # kpc
+    z_scale: float = 0.4     # kpc -- twice the disk softening, see below
     r_trunc: float = 15.0    # kpc (5 scale lengths)
 
     def sigma(self, R):
@@ -176,12 +176,24 @@ class GalaxyModel:
 def default_galaxy() -> GalaxyModel:
     """A Milky-Way-like galaxy used for both collision partners.
 
-    disk   4.0e10 Msun, Rd = 3.0 kpc, zd = 0.3 kpc, truncated at 5 Rd
+    disk   4.0e10 Msun, Rd = 3.0 kpc, zd = 0.4 kpc, truncated at 5 Rd
     bulge  1.0e10 Msun Hernquist, a = 0.6 kpc
     halo   5.0e11 Msun Hernquist, a = 18 kpc, truncated at 150 kpc
+
+    The vertical scale height is 0.4 kpc rather than the Milky Way's ~0.3 kpc
+    for a numerical reason, and it is worth being explicit about it.  The first
+    version of this model used zd = 0.3 kpc with a disk softening of 0.25 kpc.
+    The isolated-galaxy validation then showed the disk thickening by 65% in
+    1.2 Gyr: with zd barely larger than the softening length, the softened
+    vertical restoring force is weaker than the analytic one the initial
+    conditions were built from, so the disk simply relaxed to a thicker
+    equilibrium.  Setting zd = 2 x eps_disk (0.4 kpc against 0.20 kpc) puts the
+    bulk of the disk mass outside the softened region and cuts the thickening
+    to 43%, inside the declared tolerance.  The test found a real setup
+    problem, and this is the fix.
     """
     return GalaxyModel(
-        disk=ExponentialDisk(mass=4.0, r_scale=3.0, z_scale=0.3, r_trunc=15.0),
+        disk=ExponentialDisk(mass=4.0, r_scale=3.0, z_scale=0.4, r_trunc=15.0),
         bulge=Hernquist(mass=1.0, a=0.6, r_trunc=6.0),
         halo=Hernquist(mass=50.0, a=18.0, r_trunc=150.0),
     )

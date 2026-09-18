@@ -34,9 +34,6 @@ from fields import (Grid, ao_grid, density_field, esp_field, mo_field,  # noqa: 
                     sample_field, HARTREE_TO_KCAL)
 from scf_engine import HARTREE_TO_EV  # noqa: E402
 
-FOOTER = "Hartree–Fock SCF engine · NumPy + Numba"
-
-
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def lerp(a, b, t):
@@ -55,8 +52,7 @@ def orbital_label(res, index):
 
 
 def eps_text(e):
-    return (f"ε = {fnum(e, '{:+.4f}')} Ha  "
-            f"({fnum(e * HARTREE_TO_EV, '{:+.2f}')} eV)")
+    return f"ε = {fnum(e * HARTREE_TO_EV, '{:.2f}')} eV"
 
 
 class Sequencer:
@@ -87,7 +83,7 @@ def frame_to_image(cam, layers, out_size):
 
 def animation_a(out_dir, size, ss, fps, frames, quality):
     print("\n[A] orbital rotation — benzene HOMO")
-    res, _, label, formula = S.calculate("benzene", "sto-3g")
+    res, _, label, _ = S.calculate("benzene", "sto-3g")
     idx = res["homo_idx"]
     name, e = orbital_label(res, idx)
 
@@ -112,19 +108,13 @@ def animation_a(out_dir, size, ss, fps, frames, quality):
     tilt = 0.52
     path = os.path.join(out_dir, "A_orbital_rotation.mp4")
 
+    subtitle = f"{label} · RHF/STO-3G · {eps_text(e)}"
+
     def paint(img):
-        d = O.draw_on(img)
-        layer, draw = d
-        O.corner_caption(draw, size, size, [
-            (f"{label} · {formula}", True),
-            (f"RHF / STO-3G · {res['n_basis']} basis functions "
-             f"· {res['point_group']}", False),
-        ])
-        O.title_block(draw, size, size, eyebrow="molecular orbital", title=name,
-                      subtitle=eps_text(e))
-        O.phase_legend(draw, size, size,
-                       [("ψ > 0", O.POS_CHIP), ("ψ < 0", O.NEG_CHIP)])
-        O.footer(draw, size, size, FOOTER)
+        # No edge scrim: the backdrop is flat, so the caption is already legible
+        # and a gradient over a flat field would read as a smudge.
+        layer, draw = O.draw_on(img, shade_edges=False)
+        O.caption(draw, size, size, name, subtitle)
         return O.flatten(img, layer)
 
     with S.Video(path, fps=fps, poster_at=frames // 6) as vid:
@@ -143,7 +133,7 @@ def animation_b(out_dir, size, ss, fps, frames, quality):
     print("\n[B] SCF convergence — water")
     from scf_engine import compute_one_electron, parse_xyz_block, ANGSTROM_TO_BOHR
 
-    res, hist, label, formula = S.calculate("water", "6-31g*", trace=True)
+    res, hist, label, _ = S.calculate("water", "6-31g*", trace=True)
     xyz = S.MOLECULES["water"][0]
     atoms_bohr = [(s, x * ANGSTROM_TO_BOHR, y * ANGSTROM_TO_BOHR, z * ANGSTROM_TO_BOHR)
                   for s, x, y, z in parse_xyz_block(xyz)]
@@ -265,56 +255,31 @@ def animation_b(out_dir, size, ss, fps, frames, quality):
             img = frame_to_image(cam, layers, size)
             layer, draw = O.draw_on(img)
 
-            O.corner_caption(draw, size, size, [
-                (f"{label} · {formula}", True),
-                (f"RHF / 6-31G* · {res['n_basis']} basis functions "
-                 f"· DIIS", False),
-            ])
-
             shown = min(k + 1, n_cyc)
+            method = f"{label} · RHF/6-31G*"
             if stage in ("reveal", "homo"):
                 t = O.ease(u) if stage == "reveal" else 1.0
                 O.convergence_panel(draw, plot_box, cycles, deltas, upto=n_cyc,
                                     alpha=1.0 - t, ylabel="max |ΔP|",
                                     value_text=f"{deltas[-1]:.1e}")
                 nm, e = orbital_label(res, res["homo_idx"])
-                O.title_switch(draw, size, size,
-                               dict(eyebrow="converged",
-                                    title=f"{fnum(energies[-1])} Ha",
-                                    subtitle=f"{n_cyc} cycles  ·  "
-                                             f"max |ΔP| = {deltas[-1]:.1e}"),
-                               dict(eyebrow="converged orbital", title=nm,
-                                    subtitle=eps_text(e)),
-                               t if stage == "reveal" else 1.0)
-                O.phase_legend(draw, size, size,
-                               [("ψ > 0", O.POS_CHIP), ("ψ < 0", O.NEG_CHIP)],
-                               alpha=t)
+                O.caption_switch(
+                    draw, size, size,
+                    dict(title=f"{fnum(energies[-1])} Ha",
+                         subtitle=f"converged in {n_cyc} cycles  ·  {method}"),
+                    dict(title=nm, subtitle=f"{method} · {eps_text(e)}"),
+                    t if stage == "reveal" else 1.0)
             else:
                 O.convergence_panel(draw, plot_box, cycles, deltas, upto=shown,
                                     ylabel="max |ΔP|",
                                     value_text=f"{deltas[shown - 1]:.1e}")
                 if stage == "converged":
-                    a = O.ease(u * 2.0)
-                    O.title_block(draw, size, size, eyebrow="converged",
-                                  title=f"{fnum(energies[-1])} Ha",
-                                  subtitle=f"{n_cyc} cycles  ·  "
-                                           f"max |ΔP| = {deltas[-1]:.1e}", alpha=1.0)
-                    O.text(draw, (int(0.055 * size), int(0.74 * size)),
-                           "SELF-CONSISTENT", face="bold", size=int(0.021 * size),
-                           color=(74, 222, 128), alpha=a, tracking=2.2)
+                    O.caption(draw, size, size, f"{fnum(energies[-1])} Ha",
+                              f"converged in {n_cyc} cycles  ·  {method}")
                 else:
-                    O.title_block(draw, size, size,
-                                  eyebrow=f"scf cycle {shown} of {n_cyc}",
-                                  title=f"{fnum(energies[shown - 1])} Ha",
-                                  subtitle="electron density  ρ(r)   ·   "
-                                           "error  ρ − ρ_final")
-                    O.phase_legend(draw, size, size, [
-                        ("ρ(r)", O.TEAL_CHIP),
-                        ("Δρ > 0", O.POS_CHIP),
-                        ("Δρ < 0", O.NEG_CHIP)], alpha=show_err)
+                    O.caption(draw, size, size, f"{fnum(energies[shown - 1])} Ha",
+                              f"SCF cycle {shown} of {n_cyc}  ·  {method}")
 
-            O.footer(draw, size, size, FOOTER)
-            O.progress(draw, size, size, i / max(1, total - 1))
             vid.add(O.flatten(img, layer), total)
     return path
 
@@ -323,7 +288,7 @@ def animation_b(out_dir, size, ss, fps, frames, quality):
 
 def animation_c(out_dir, size, ss, fps, frames, quality):
     print("\n[C] orbital switch — benzene")
-    res, _, label, formula = S.calculate("benzene", "sto-3g")
+    res, _, label, _ = S.calculate("benzene", "sto-3g")
     homo = res["homo_idx"]
     n_occ = homo + 1
 
@@ -379,11 +344,7 @@ def animation_c(out_dir, size, ss, fps, frames, quality):
         p, n = S.surface_for(f, grid, MO_ISO, ppa_at(r_mo))
         mo_surf[key] = R.SurfacePoints.concat([(p, R.PHASE_POS), (n, R.PHASE_NEG)])
 
-    MO_INFO = {
-        "homo1": (homo - 1, "π · doubly degenerate e₁g"),
-        "homo":  (homo,     "π · doubly degenerate e₁g"),
-        "lumo":  (homo + 1, "π* · doubly degenerate e₂u"),
-    }
+    MO_INFO = {"homo1": homo - 1, "homo": homo, "lumo": homo + 1}
 
     f = frames / 440.0
     seq = (Sequencer()
@@ -394,22 +355,22 @@ def animation_c(out_dir, size, ss, fps, frames, quality):
            .add("lumo", int(72 * f)))
     total = seq.n
 
-    def mo_title(key):
-        idx, note = MO_INFO[key]
-        nm, e = orbital_label(res, idx)
-        return dict(eyebrow="molecular orbital", title=nm,
-                    subtitle=f"{note}   ·   {eps_text(e)}")
+    method = f"{label} · RHF/STO-3G"
 
-    T_RHO = dict(eyebrow="charge distribution", title="Electron density",
-                 subtitle=f"ρ(r) = 2 Σ |ψᵢ(r)|²   ·   {res['n_electrons']} electrons")
-    T_ESP = dict(eyebrow="electrostatic potential", title="Electrostatic potential",
-                 subtitle="V(r) on ρ = 0.002 a.u.  ·  Poisson solve from the HF density")
-    TITLE_HOLD = {"rho": T_RHO, "esp": T_ESP, "homo1": mo_title("homo1"),
-                  "homo": mo_title("homo"), "lumo": mo_title("lumo")}
-    TITLE_MOVE = {"inflate": (T_RHO, T_ESP),
-                  "to_homo1": (T_ESP, mo_title("homo1")),
-                  "to_homo": (mo_title("homo1"), mo_title("homo")),
-                  "to_lumo": (mo_title("homo"), mo_title("lumo"))}
+    def mo_title(key):
+        nm, e = orbital_label(res, MO_INFO[key])
+        return dict(title=nm, subtitle=f"{method} · {eps_text(e)}")
+
+    T_RHO = dict(title="Electron density",
+                 subtitle=f"{method} · {res['n_electrons']} electrons")
+    T_ESP = dict(title="Electrostatic potential",
+                 subtitle="on the ρ = 0.002 a.u. surface")
+    CAPTION_HOLD = {"rho": T_RHO, "esp": T_ESP, "homo1": mo_title("homo1"),
+                    "homo": mo_title("homo"), "lumo": mo_title("lumo")}
+    CAPTION_MOVE = {"inflate": (T_RHO, T_ESP),
+                    "to_homo1": (T_ESP, mo_title("homo1")),
+                    "to_homo": (mo_title("homo1"), mo_title("homo")),
+                    "to_lumo": (mo_title("homo"), mo_title("lumo"))}
 
     path = os.path.join(out_dir, "C_orbital_switch.mp4")
     bar_box = (int(0.600 * size), int(0.128 * size),
@@ -478,42 +439,22 @@ def animation_c(out_dir, size, ss, fps, frames, quality):
 
             img = frame_to_image(cam, layers, size)
             layer, draw = O.draw_on(img)
-            O.corner_caption(draw, size, size, [
-                (f"{label} · {formula}", True),
-                (f"RHF / STO-3G · E = {res['total_energy']:.4f} Ha", False),
-            ])
-
-            if stage in TITLE_HOLD:
-                O.title_block(draw, size, size, **TITLE_HOLD[stage])
+            if stage in CAPTION_HOLD:
+                O.caption(draw, size, size, **CAPTION_HOLD[stage])
             else:
-                before, after = TITLE_MOVE[stage]
-                O.title_switch(draw, size, size, before, after, u)
+                before, after = CAPTION_MOVE[stage]
+                O.caption_switch(draw, size, size, before, after, u)
 
             if bar_alpha > 0.02:
-                pad_x, pad_y = int(0.028 * size), int(0.052 * size)
+                pad_x, pad_y = int(0.026 * size), int(0.046 * size)
                 O.panel(draw, (bar_box[0] - pad_x, bar_box[1] - pad_y,
                                bar_box[2] + pad_x, bar_box[3] + pad_y),
-                        alpha=0.78 * bar_alpha, radius=int(0.018 * size),
-                        border=(44, 62, 96), border_alpha=0.55 * bar_alpha)
+                        alpha=0.72 * bar_alpha, radius=int(0.018 * size))
                 O.colorbar(draw, bar_box, S.esp_ramp, alpha=bar_alpha,
-                           title="V(r)   kcal/mol per e",
+                           title="kcal/mol",
                            labels=(f"−{vmax:.0f}", f"+{vmax:.0f}"),
                            ticks=[(0.5, "0")])
 
-            rho_legend = [("ρ(r)", O.TEAL_CHIP)]
-            mo_legend = [("ψ > 0", O.POS_CHIP), ("ψ < 0", O.NEG_CHIP)]
-            if stage in ("rho", "inflate", "esp"):
-                O.phase_legend(draw, size, size, rho_legend)
-            elif stage == "to_homo1":
-                entries, a = ((rho_legend, 1.0 - 2.0 * u) if u < 0.5
-                              else (mo_legend, 2.0 * u - 1.0))
-                if a > 0.01:
-                    O.phase_legend(draw, size, size, entries, alpha=O.ease(a))
-            else:
-                O.phase_legend(draw, size, size, mo_legend)
-
-            O.footer(draw, size, size, FOOTER)
-            O.progress(draw, size, size, i / max(1, total - 1))
             vid.add(O.flatten(img, layer), total)
     return path
 

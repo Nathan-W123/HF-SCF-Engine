@@ -77,9 +77,11 @@ def font(face: str, size: int, s: str | None = None) -> ImageFont.FreeTypeFont:
 
 # ── Colours ───────────────────────────────────────────────────────────────────
 
-INK        = (238, 242, 250)
-INK_DIM    = (148, 163, 190)
-INK_FAINT  = (96, 110, 138)
+# Neutral greys: the backdrop is neutral, and a blue-tinted caption over it
+# reads as a tint rather than as type.
+INK        = (240, 241, 243)
+INK_DIM    = (163, 166, 171)
+INK_FAINT  = (120, 123, 128)
 ACCENT     = (56, 189, 248)
 POS_CHIP   = (56, 132, 250)
 NEG_CHIP   = (250, 62, 78)
@@ -107,14 +109,14 @@ def _rgba(color, alpha: float):
     return tuple(int(c) for c in color) + (int(round(255 * max(0.0, min(1.0, alpha)))),)
 
 
-def scrim(size, *, top=0.17, bottom=0.33, strength=0.74, color=(5, 9, 18)):
+def scrim(size, *, top=0.0, bottom=0.30, strength=0.58, color=(5, 9, 18)):
     """
     Vertical darkening at the top and bottom edges.
 
-    Captions sit over whatever the render happens to put behind them, and a
-    pale isosurface can swallow small type entirely.  A gradient scrim costs
-    almost nothing visually on a dark scene and makes the text unconditionally
-    legible.
+    The caption sits over whatever the render happens to put behind it, and a
+    pale isosurface can swallow small type entirely.  A gradient along the
+    bottom edge costs almost nothing visually on a dark scene and makes the
+    text unconditionally legible.
     """
     w, h = size
     y = np.arange(h)
@@ -161,16 +163,6 @@ def text_width(s, face="regular", size=28) -> float:
     return ImageDraw.Draw(Image.new("RGB", (1, 1))).textlength(s, font=font(face, size, s))
 
 
-def rule(draw, x, y, w, *, color=ACCENT, alpha=1.0, thickness=3):
-    draw.rectangle([x, y, x + w, y + thickness], fill=_rgba(color, alpha))
-
-
-def chip(draw, x, y, label, color, *, alpha=1.0, size=22, dot=13):
-    draw.ellipse([x, y + 2, x + dot, y + 2 + dot], fill=_rgba(color, alpha))
-    text(draw, (x + dot + 10, y - 2), label, size=size, color=INK_DIM, alpha=alpha)
-    return x + dot + 16 + text_width(label, "regular", size)
-
-
 def panel(draw, box, *, alpha=0.55, radius=18, border=None, border_alpha=0.5):
     draw.rounded_rectangle(box, radius=radius, fill=_rgba(PANEL_BG, alpha),
                            outline=None if border is None else _rgba(border, border_alpha),
@@ -190,62 +182,37 @@ def fade_window(i, n, hold_in, hold_out) -> float:
     return min(a, b)
 
 
-# ── Composite elements ────────────────────────────────────────────────────────
+# ── Caption ──────────────────────────────────────────────────────────────────
+#
+# One block, bottom left: a headline and at most one line under it.  Everything
+# else a frame could say — the point group, the basis-function count, the phase
+# legend, a tool credit — competes with the thing the clip is actually about,
+# and none of it is read in eight seconds.  Anything that belongs with the work
+# rather than in it goes in the post copy instead.
 
-def title_block(draw, W, H, *, eyebrow, title, subtitle, alpha=1.0, y=None):
-    """Bottom-left stack: accent rule, small eyebrow, big title, subtitle."""
-    pad = int(0.055 * W)
-    y = int(0.775 * H) if y is None else y
-    rule(draw, pad, y, int(0.075 * W), alpha=alpha, thickness=max(3, W // 360))
-    text(draw, (pad, y + int(0.022 * H)), eyebrow.upper(), face="bold",
-         size=int(0.0205 * W), color=ACCENT, alpha=alpha, tracking=2.2)
-    text(draw, (pad, y + int(0.050 * H)), title, face="bold",
-         size=int(0.066 * W), color=INK, alpha=alpha)
+def caption(draw, W, H, title, subtitle=None, *, alpha=1.0):
+    if alpha <= 0.01:
+        return
+    x = int(0.058 * W)
+    y = int(0.845 * H)
+    text(draw, (x, y), title, face="bold", size=int(0.062 * W),
+         color=INK, alpha=alpha, anchor="ls")
     if subtitle:
-        text(draw, (pad, y + int(0.128 * H)), subtitle, size=int(0.0235 * W),
-             color=INK_DIM, alpha=alpha)
+        text(draw, (x, y + int(0.040 * H)), subtitle, size=int(0.0215 * W),
+             color=INK_DIM, alpha=alpha, anchor="ls")
 
 
-def title_switch(draw, W, H, before, after, t, *, alpha=1.0):
+def caption_switch(draw, W, H, before, after, t, *, alpha=1.0):
     """
-    One title slot handing over from `before` to `after` across t in [0, 1].
+    One caption slot handing over from `before` to `after` across t in [0, 1].
 
-    The outgoing title is gone before the incoming one appears, so the two
-    never overprint each other — drawing both at partial alpha in the same
-    place turns into an unreadable pile.
+    The outgoing caption is gone before the incoming one appears; drawing both
+    at partial alpha in the same place just piles them on top of each other.
     """
     spec, a = (before, 1.0 - 2.0 * t) if t < 0.5 else (after, 2.0 * t - 1.0)
     if spec is None or a <= 0.01:
         return
-    title_block(draw, W, H, alpha=ease(a) * alpha, **spec)
-
-
-def corner_caption(draw, W, H, lines, *, alpha=1.0):
-    """Top-left metadata lines."""
-    pad = int(0.055 * W)
-    y = int(0.058 * H)
-    for i, (s, strong) in enumerate(lines):
-        text(draw, (pad, y + i * int(0.034 * W)), s,
-             face="bold" if strong else "regular",
-             size=int(0.0265 * W) if strong else int(0.023 * W),
-             color=INK if strong else INK_DIM, alpha=alpha)
-
-
-def footer(draw, W, H, s, *, alpha=0.75):
-    text(draw, (W - int(0.055 * W), H - int(0.052 * H)), s, size=int(0.0195 * W),
-         color=INK_FAINT, alpha=alpha, anchor="rs")
-
-
-def phase_legend(draw, W, H, entries, *, alpha=1.0):
-    """Row of colour chips, bottom-right above the footer."""
-    size = int(0.0205 * W)
-    dot = int(0.0125 * W)
-    widths = [dot + 10 + text_width(lbl, "regular", size) + 26 for lbl, _ in entries]
-    x = W - int(0.055 * W) - sum(widths) + 26
-    y = H - int(0.108 * H)
-    for (lbl, col), w in zip(entries, widths):
-        chip(draw, x, y, lbl, col, alpha=alpha, size=size, dot=dot)
-        x += w
+    caption(draw, W, H, alpha=ease(a) * alpha, **spec)
 
 
 # ── Convergence chart ─────────────────────────────────────────────────────────
@@ -354,10 +321,3 @@ def colorbar(draw, box, ramp, *, labels=("", ""), title="", alpha=1.0, ticks=Non
         draw.line([tx, y0, tx, y1], fill=_rgba((255, 255, 255), 0.5 * alpha), width=1)
         text(draw, (tx, y1 + 9), lab, face="mono", size=18, color=INK_DIM,
              alpha=alpha, anchor="ma")
-
-
-def progress(draw, W, H, t, *, alpha=1.0, color=ACCENT):
-    """Hairline progress bar across the very bottom."""
-    h = max(3, H // 300)
-    draw.rectangle([0, H - h, W, H], fill=_rgba((26, 36, 60), 0.85 * alpha))
-    draw.rectangle([0, H - h, int(W * min(1.0, max(0.0, t))), H], fill=_rgba(color, alpha))

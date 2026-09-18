@@ -20,8 +20,9 @@ import numpy as np
 
 # ── Palette ───────────────────────────────────────────────────────────────────
 
-BG_INNER = np.array([0.038, 0.052, 0.092])
-BG_OUTER = np.array([0.012, 0.018, 0.038])
+# Flat neutral studio grey.  Stored linear; to_image applies the sRGB curve, so
+# this lands near #35373b on screen.
+BACKGROUND = np.array([0.0343, 0.0343, 0.0343])
 
 ATOM_COLORS = {
     "H":  (0.92, 0.93, 0.96), "C":  (0.42, 0.46, 0.53), "N":  (0.33, 0.45, 0.95),
@@ -483,13 +484,9 @@ def despeckle(rgb: np.ndarray, *, min_disagree=7, threshold=0.10):
 # ── Compositing ───────────────────────────────────────────────────────────────
 
 def background(cam: Camera) -> np.ndarray:
-    """Radial gradient with a light vignette."""
-    h, w = cam.height, cam.width
-    yy = (np.arange(h) - 0.5 * h) / (0.5 * h)
-    xx = (np.arange(w) - 0.5 * w) / (0.5 * w)
-    r = np.sqrt(xx[None, :] ** 2 + yy[:, None] ** 2) / np.sqrt(2.0)
-    t = np.clip(r, 0.0, 1.0)[..., None] ** 1.25
-    return (BG_INNER * (1.0 - t) + BG_OUTER * t).astype(np.float32)
+    """Flat backdrop.  No gradient — the subject supplies all the interest."""
+    return np.broadcast_to(BACKGROUND.astype(np.float32),
+                           (cam.height, cam.width, 3)).copy()
 
 
 def compose(cam: Camera, layers, bg=None, fog=0.30) -> np.ndarray:
@@ -522,14 +519,41 @@ def compose(cam: Camera, layers, bg=None, fog=0.30) -> np.ndarray:
     return out
 
 
+# 8x8 Bayer matrix, used to break up quantisation steps.  A fixed pattern is
+# right for video: random dither would crawl from frame to frame and cost the
+# encoder bitrate for noise nobody wants to see.
+_BAYER8 = np.array([
+    [0, 32, 8, 40, 2, 34, 10, 42], [48, 16, 56, 24, 50, 18, 58, 26],
+    [12, 44, 4, 36, 14, 46, 6, 38], [60, 28, 52, 20, 62, 30, 54, 22],
+    [3, 35, 11, 43, 1, 33, 9, 41], [51, 19, 59, 27, 49, 17, 57, 25],
+    [15, 47, 7, 39, 13, 45, 5, 37], [63, 31, 55, 23, 61, 29, 53, 21],
+], dtype=np.float32) / 64.0 - 0.5
+
+
 def to_image(rgb: np.ndarray, out_size: int | tuple | None = None):
-    """Tone-map to 8-bit and downsample the supersampled buffer."""
+    """
+    Resample, tone-map and quantise the supersampled buffer to 8-bit.
+
+    Resizing happens in floating point and quantisation last, with an ordered
+    dither.  Done the other way round, a dark background gradient spanning only
+    a dozen 8-bit levels quantises into visible concentric bands, and averaging
+    already-banded pixels cannot recover the steps.
+    """
     from PIL import Image
 
     x = np.clip(rgb, 0.0, 1.0)
     x = np.where(x <= 0.0031308, 12.92 * x, 1.055 * x ** (1 / 2.4) - 0.055)
-    img = Image.fromarray((x * 255.0 + 0.5).astype(np.uint8), "RGB")
+
     if out_size is not None:
         size = (out_size, out_size) if isinstance(out_size, int) else out_size
-        img = img.resize(size, Image.LANCZOS)
-    return img
+        if size != (x.shape[1], x.shape[0]):
+            x = np.stack([
+                np.asarray(Image.fromarray(x[..., c].astype(np.float32), "F")
+                           .resize(size, Image.LANCZOS))
+                for c in range(3)
+            ], axis=-1)
+
+    h, w = x.shape[:2]
+    dither = np.tile(_BAYER8, (h // 8 + 1, w // 8 + 1))[:h, :w, None]
+    q = np.clip(x * 255.0 + 0.5 + dither, 0.0, 255.0).astype(np.uint8)
+    return Image.fromarray(q, "RGB")

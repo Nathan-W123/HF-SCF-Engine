@@ -201,7 +201,8 @@ class Video:
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         self.w = imageio.get_writer(
             path, fps=fps, codec="libx264", macro_block_size=1,
-            ffmpeg_params=["-crf", "17", "-preset", "slow", "-pix_fmt", "yuv420p",
+            pixelformat="yuv420p",     # the format every social player decodes
+            ffmpeg_params=["-crf", "17", "-preset", "slow",
                            "-profile:v", "high", "-movflags", "+faststart"],
         )
 

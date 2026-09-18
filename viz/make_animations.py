@@ -80,7 +80,7 @@ class Sequencer:
 
 
 def frame_to_image(cam, layers, out_size):
-    return R.to_image(R.compose(cam, layers), out_size)
+    return R.to_image(R.despeckle(R.compose(cam, layers)), out_size)
 
 
 # ── A. orbital rotation ───────────────────────────────────────────────────────

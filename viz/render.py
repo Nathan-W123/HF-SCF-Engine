@@ -427,6 +427,59 @@ def fill_holes(layer: Layer, passes: int = 1):
         layer.alpha[fill] = a.max()
 
 
+def despeckle(rgb: np.ndarray, *, min_disagree=7, threshold=0.10):
+    """
+    Remove isolated pixels that disagree with their whole neighbourhood.
+
+    A splatted point reports the depth of one spot on the surface, not of its
+    whole pixel, so wherever two things pass close together in depth — the two
+    phases of an orbital either side of a node, or a lobe grazing the atom it
+    encloses — scattered pixels are won by the wrong one.  Single stray pixels
+    of the opposite phase, or of the grey ball-and-stick behind, shimmer badly
+    in motion.
+
+    A pixel is replaced by the mean of its neighbours only when at least
+    `min_disagree` of the eight differ from it by more than `threshold` in some
+    channel.  At 7 of 8 even a one-pixel-wide line survives — its two
+    neighbours along the line agree with it — while an isolated speck, which
+    has nothing agreeing with it anywhere, does not.  Edges keep a whole side
+    of agreeing neighbours and are never touched.
+    """
+    out = rgb
+    h, w = out.shape[:2]
+    pad = np.pad(out, ((1, 1), (1, 1), (0, 0)), mode="edge")
+    offsets = [(dy, dx) for dy in (0, 1, 2) for dx in (0, 1, 2) if (dy, dx) != (1, 1)]
+
+    # Pass 1: how many neighbours differ, per pixel.  Channel-at-a-time keeps
+    # this to 2-D temporaries over a full-resolution frame.
+    count = np.zeros((h, w), dtype=np.uint8)
+    far = np.empty((h, w), dtype=bool)
+    tmp = np.empty((h, w), dtype=bool)
+    for dy, dx in offsets:
+        n = pad[dy:dy + h, dx:dx + w]
+        np.greater(np.abs(n[..., 0] - out[..., 0]), threshold, out=far)
+        for c in (1, 2):
+            np.greater(np.abs(n[..., c] - out[..., c]), threshold, out=tmp)
+            np.logical_or(far, tmp, out=far)
+        count += far
+
+    ys, xs = np.nonzero(count >= min_disagree)
+    if len(ys) == 0:
+        return out
+
+    # Pass 2: average the disagreeing neighbours, only where it matters.
+    here = out[ys, xs]
+    acc = np.zeros_like(here)
+    hits = np.zeros(len(ys), dtype=np.float32)
+    for dy, dx in offsets:
+        n = pad[ys + dy, xs + dx]
+        f = np.max(np.abs(n - here), axis=-1) > threshold
+        acc += n * f[:, None]
+        hits += f
+    out[ys, xs] = acc / hits[:, None]
+    return out
+
+
 # ── Compositing ───────────────────────────────────────────────────────────────
 
 def background(cam: Camera) -> np.ndarray:

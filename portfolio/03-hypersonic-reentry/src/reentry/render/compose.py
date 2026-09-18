@@ -57,10 +57,15 @@ def upsample_bilinear(small, height, width):
     order of magnitude faster and visually identical.
     """
     h, w = small.shape[:2]
-    yi = (np.arange(height, dtype=np.float32) + 0.5) * (h / height) - 0.5
-    xi = (np.arange(width, dtype=np.float32) + 0.5) * (w / width) - 0.5
-    y0 = np.clip(np.floor(yi), 0, h - 1).astype(np.int32)
-    x0 = np.clip(np.floor(xi), 0, w - 1).astype(np.int32)
+    # Clamp the sample coordinates *before* taking the fractional part so the
+    # border rows/columns are edge-extended rather than linearly extrapolated
+    # (extrapolation would push values outside the source range).
+    yi = np.clip((np.arange(height, dtype=np.float32) + 0.5) * (h / height) - 0.5,
+                 0.0, h - 1.0)
+    xi = np.clip((np.arange(width, dtype=np.float32) + 0.5) * (w / width) - 0.5,
+                 0.0, w - 1.0)
+    y0 = np.floor(yi).astype(np.int32)
+    x0 = np.floor(xi).astype(np.int32)
     y1 = np.minimum(y0 + 1, h - 1)
     x1 = np.minimum(x0 + 1, w - 1)
     fy = (yi - y0).astype(np.float32)[:, None, None]

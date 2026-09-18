@@ -1,0 +1,992 @@
+{
+  "project": "03-hypersonic-reentry",
+  "title": "Hypersonic atmospheric reentry simulator",
+  "version": "1.0.0",
+  "generated_utc": "2026-09-18T19:08:16+00:00",
+  "environment": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "matplotlib": "3.11.2",
+    "numba": "0.67.0",
+    "imageio": "2.37.4",
+    "imageio_ffmpeg": "0.6.0",
+    "PIL": "12.3.0",
+    "tqdm": "4.70.1"
+  },
+  "reproduction": {
+    "command": "make all",
+    "quick_mode": false,
+    "hero_rendered": true,
+    "stage_seconds": {
+      "trajectories": 35.49883151054382,
+      "validation": 44.010212421417236,
+      "figures": 9.181606769561768,
+      "hero": 1160.8489043712616
+    },
+    "total_seconds": 1249.5
+  },
+  "model": {
+    "gravity": "central inverse-square, mu = 3.986004418e14 m^3/s^2, spherical Earth R = 6371.0 km (WGS-84 mean radius R1)",
+    "earth_rotation_included_in_reported_results": false,
+    "earth_rotation_available": true,
+    "omega_earth_rad_s": 7.292115e-05,
+    "mu_m3_s2": 398600441800000.0,
+    "r_earth_m": 6371000.0,
+    "atmosphere": "USSA76 from the geopotential layer table to 86 km; USSA76 kinetic-temperature profile with hydrostatic integration at constant mean molecular weight above",
+    "aerodynamics": "modified Newtonian surface integration over a 70 deg sphere-cone, Cp_max from the Rayleigh pitot relation (supersonic) / isentropic stagnation (subsonic)",
+    "cp_max_hypersonic_limit": 1.8393710511306678,
+    "heating_primary": "Sutton-Graves, k = 0.00017415 SI",
+    "heating_cross_check": "Detra-Kemp-Riddell form (V^3.15) -- leading coefficient unverified offline, see README",
+    "wall_temperature": "radiative equilibrium, eps*sigma*T^4 = qdot, eps = 0.85, sigma = 5.67037442e-08",
+    "integrator": "scipy DOP853, rtol = atol = 1e-10, terminal-altitude and skip-out events; fixed-step RK4 cross-check",
+    "degrees_of_freedom": 3
+  },
+  "cases": {
+    "ballistic": {
+      "termination": "terminal_altitude",
+      "duration_s": 251.18005484330052,
+      "entry_altitude_km": 120.0,
+      "entry_velocity_m_s": 7800.0,
+      "entry_flight_path_angle_deg": -5.5,
+      "final_altitude_km": 10.0,
+      "final_velocity_m_s": 112.83157575660103,
+      "final_mach": 0.3766931881213716,
+      "downrange_km": 860.7181697335002,
+      "peak_heat_flux_W_cm2": 155.10561207041698,
+      "peak_heat_flux_time_s": 87.20134237309917,
+      "peak_heat_flux_altitude_km": 55.178159512505864,
+      "peak_heat_flux_velocity_m_s": 6727.3202101074985,
+      "peak_wall_temperature_K": 2381.7666636815306,
+      "total_heat_load_J_cm2": 7513.4367807646695,
+      "total_heat_load_dkr_J_cm2": 8327.14338224389,
+      "total_heat_load_exp315_J_cm2": 7237.714622276905,
+      "peak_g_load": 15.57444101551618,
+      "peak_g_time_s": 105.99798314387283,
+      "peak_g_altitude_km": 43.96742306130659,
+      "peak_dynamic_pressure_kPa": 21.26277796324143,
+      "peak_dynamic_pressure_altitude_km": 43.92529181775917,
+      "peak_mach": 28.576358684695144,
+      "peak_wall_temperature_hot_wall_corrected_K": 2319.402120864484,
+      "heat_load_dkr_over_sutton_graves": 1.1083001860829402,
+      "peak_q_dkr_W_cm2": 174.223908497,
+      "peak_q_exp315_W_cm2": 151.43043324650637,
+      "peak_q_dkr_over_sutton_graves": 1.1232598625632155,
+      "vehicle": {
+        "nose_radius_m": 0.65,
+        "base_radius_m": 1.3,
+        "cone_half_angle_deg": 70.0,
+        "reference_area_m2": 5.3092915845667505,
+        "tangency_polar_angle_deg": 20.000000000000004,
+        "cd_alpha0_mach25": 1.6262600708234436,
+        "cl_alpha0_mach25": 3.7183945019509726e-19,
+        "cp_max_hypersonic_limit": 1.8393710511306678,
+        "name": "70deg sphere-cone, ballistic",
+        "mass_kg": 1200.0,
+        "alpha_trim_deg": 0.0,
+        "bank_deg": 0.0,
+        "emissivity": 0.85,
+        "ballistic_coefficient_mach25_kg_m2": 138.98075599959634,
+        "lift_to_drag_mach25": 2.2864697772897994e-19
+      }
+    },
+    "lifting": {
+      "termination": "terminal_altitude",
+      "duration_s": 483.49997573719696,
+      "entry_altitude_km": 120.0,
+      "entry_velocity_m_s": 7800.0,
+      "entry_flight_path_angle_deg": -5.5,
+      "final_altitude_km": 10.0,
+      "final_velocity_m_s": 118.7312728801188,
+      "final_mach": 0.396389586966341,
+      "downrange_km": 1533.1484386206987,
+      "peak_heat_flux_W_cm2": 149.16375879239607,
+      "peak_heat_flux_time_s": 87.75524559630125,
+      "peak_heat_flux_altitude_km": 57.66138951411564,
+      "peak_heat_flux_velocity_m_s": 6978.316946441431,
+      "peak_wall_temperature_K": 2358.6210169142933,
+      "total_heat_load_J_cm2": 11273.769106860096,
+      "total_heat_load_dkr_J_cm2": 12293.17362679784,
+      "total_heat_load_exp315_J_cm2": 10684.874563657131,
+      "peak_g_load": 7.85367500075314,
+      "peak_g_time_s": 98.23107840394051,
+      "peak_g_altitude_km": 54.34192395316809,
+      "peak_dynamic_pressure_kPa": 12.010636685046478,
+      "peak_dynamic_pressure_altitude_km": 54.32583447634522,
+      "peak_mach": 28.580320461541753,
+      "peak_wall_temperature_hot_wall_corrected_K": 2301.476352240872,
+      "heat_load_dkr_over_sutton_graves": 1.090422689188963,
+      "peak_q_dkr_W_cm2": 168.42629904094645,
+      "peak_q_exp315_W_cm2": 146.39131709248355,
+      "peak_q_dkr_over_sutton_graves": 1.1291368654457126,
+      "vehicle": {
+        "nose_radius_m": 0.65,
+        "base_radius_m": 1.3,
+        "cone_half_angle_deg": 70.0,
+        "reference_area_m2": 5.3092915845667505,
+        "tangency_polar_angle_deg": 20.000000000000004,
+        "cd_alpha0_mach25": 1.6262600708234436,
+        "cl_alpha0_mach25": 3.7183945019509726e-19,
+        "cp_max_hypersonic_limit": 1.8393710511306678,
+        "name": "70deg sphere-cone, lifting (alpha=-20 deg, bank=0)",
+        "mass_kg": 1200.0,
+        "alpha_trim_deg": -20.0,
+        "bank_deg": 0.0,
+        "emissivity": 0.85,
+        "ballistic_coefficient_mach25_kg_m2": 163.2663989109255,
+        "lift_to_drag_mach25": 0.3116237603000848
+      }
+    }
+  },
+  "entry_corridor": {
+    "leo": {
+      "entry_velocity_m_s": 7800.0,
+      "circular_speed_at_entry_m_s": 7836.336618052743,
+      "skip_out_gammas_deg": [],
+      "shallowest_gamma_exceeding_10g_deg": -3.25
+    },
+    "super_circular": {
+      "entry_velocity_m_s": 11000.0,
+      "skip_out_boundary_gamma_deg": -5.005556106567383,
+      "shallowest_gamma_exceeding_10g_deg": -5.75
+    },
+    "n_cases": 90
+  },
+  "validation": {
+    "all_passed": true,
+    "n_checks": 44,
+    "n_failed": 0,
+    "reports": {
+      "Validation 1: vacuum orbital energy, angular momentum and period": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "A. circular: |dE/E| drift over 3 periods",
+            "value": 7.59375192771368e-16,
+            "threshold": 1e-11,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "A. circular: |dh/h| drift over 3 periods",
+            "value": 2.9371408573518927e-16,
+            "threshold": 1e-11,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "A. circular: radius drift |dr|",
+            "value": 0.0,
+            "threshold": 0.001,
+            "comparison": "<",
+            "units": "m",
+            "passed": true
+          },
+          {
+            "name": "A. circular: |a - r0| semi-major axis error",
+            "value": 5.587935447692871e-09,
+            "threshold": 0.001,
+            "comparison": "<",
+            "units": "m",
+            "passed": true
+          },
+          {
+            "name": "B. period closure error after 2*pi*sqrt(a^3/mu)",
+            "value": 1.0919992857564472e-08,
+            "threshold": 1.0,
+            "comparison": "<",
+            "units": "m",
+            "passed": true
+          },
+          {
+            "name": "B. period closure / circumference",
+            "value": 2.566786060861877e-16,
+            "threshold": 1e-08,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "C. rotating: inertial |dE/E| drift",
+            "value": 7.878743275454963e-13,
+            "threshold": 1e-10,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "C. rotating: inertial |dh/h| drift",
+            "value": 5.644108006221347e-13,
+            "threshold": 1e-10,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "C. rotating: orbit-plane normal drift",
+            "value": 7.0211497144051654e-12,
+            "threshold": 1e-09,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "C. rotating: max |dr| vs inertial Cartesian 2-body",
+            "value": 4.1057298773642826e-05,
+            "threshold": 0.01,
+            "comparison": "<",
+            "units": "m",
+            "passed": true
+          },
+          {
+            "name": "C. rotating: max |dv| vs inertial Cartesian 2-body",
+            "value": 4.3927448920015176e-08,
+            "threshold": 1e-05,
+            "comparison": "<",
+            "units": "m/s",
+            "passed": true
+          }
+        ],
+        "data": {
+          "circular_orbit": {
+            "altitude_km": 400.0,
+            "v_circular_m_s": 7672.598648385013,
+            "kepler_period_s": 5544.855095980792,
+            "period_closure_error_m": 1.0919992857564472e-08,
+            "energy_drift_rel": 7.59375192771368e-16,
+            "angular_momentum_drift_rel": 2.9371408573518927e-16,
+            "specific_energy_J_per_kg": -29434385.009599764
+          },
+          "rotating_orbit": {
+            "omega_rad_s": 7.292115e-05,
+            "altitude0_km": 500.0,
+            "relative_speed_m_s": 7600.0,
+            "gamma0_deg": 6.0,
+            "inclination_deg": 50.4775330244275,
+            "semi_major_axis_km": 7455.019846639017,
+            "inertial_energy_drift_rel": 7.878743275454963e-13,
+            "inertial_h_drift_rel": 5.644108006221347e-13,
+            "orbit_plane_normal_drift": 7.0211497144051654e-12,
+            "max_position_error_vs_cartesian_2body_m": 4.1057298773642826e-05,
+            "max_velocity_error_vs_cartesian_2body_m_s": 4.3927448920015176e-08,
+            "propagation_time_s": 3000.0
+          }
+        }
+      },
+      "Validation 2: Allen-Eggers closed-form ballistic entry benchmark": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "A. exact limit: peak deceleration rel. error",
+            "value": 2.5436263237101784e-09,
+            "threshold": 1e-06,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "A. exact limit: peak-altitude rel. error",
+            "value": 6.241348492377863e-08,
+            "threshold": 1e-06,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "A. exact limit: V at analytic peak rel. error",
+            "value": 6.809713968911766e-10,
+            "threshold": 1e-06,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "A. exact limit: max |a_sim - a_AE| / a_max over profile",
+            "value": 5.113435611552177e-11,
+            "threshold": 1e-08,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "B. gravity off, gamma=-90 deg: |a_max| rel. error",
+            "value": 1.5586101828006986e-12,
+            "threshold": 1e-06,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "B. gravity off, gamma=-45 deg: |a_max| rel. error",
+            "value": 0.012787098686878237,
+            "threshold": 0.02,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "B. |error| decreases monotonically with steepness",
+            "value": 1.0,
+            "threshold": 0.5,
+            "comparison": ">",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "C. full physics, gamma <= -30 deg: worst |a_max| rel. error",
+            "value": 0.049024997286653375,
+            "threshold": 0.06,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "C. full physics, gamma <= -30 deg: worst |z_peak| error",
+            "value": 0.16123805856898252,
+            "threshold": 0.5,
+            "comparison": "<",
+            "units": "km",
+            "passed": true
+          },
+          {
+            "name": "C. gamma <= -45 deg: |error - gravity-work prediction|",
+            "value": 0.007796803980019085,
+            "threshold": 0.012,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          }
+        ],
+        "data": {
+          "configuration": {
+            "rho0_kg_m3": 1.225,
+            "scale_height_m": 7200.0,
+            "constant_cd": 1.5,
+            "ballistic_coefficient_kg_m2": 150.67923606333287,
+            "entry_velocity_m_s": 7000.0,
+            "entry_altitude_km": 120.0,
+            "terminal_altitude_km": 10.0
+          },
+          "exact_limit": {
+            "gamma_deg": -30.0,
+            "a_max_sim_m_s2": 625.9102257121423,
+            "a_max_sim_g": 63.82508050273461,
+            "a_max_analytic_m_s2": 625.910227304224,
+            "a_max_analytic_g": 63.825080665081764,
+            "a_max_rel_error": -2.5436263237101784e-09,
+            "z_peak_sim_km": 34.2919534603563,
+            "z_peak_analytic_km": 34.29195132007611,
+            "z_peak_rel_error": 6.241348492377863e-08,
+            "v_at_peak_sim_m_s": 4245.7289741351815,
+            "v_at_peak_analytic_m_s": 4245.7289770264015,
+            "max_profile_deviation_over_amax": 5.113435611552177e-11
+          },
+          "sweep": [
+            {
+              "gamma_deg": -5.0,
+              "ve_anchored_m_s": 7000.135815726012,
+              "a_max_analytic_m_s2": 109.10683724755481,
+              "a_max_analytic_g": 11.125801088807576,
+              "z_peak_analytic_km": 46.86971364232303,
+              "B_a_max_sim_m_s2": 0.3541633218432001,
+              "B_a_max_sim_g": 0.03611460813256312,
+              "B_a_max_rel_error": -0.9967539768287882,
+              "B_z_peak_sim_km": 95.29980128194019,
+              "B_z_peak_error_km": 48.43008763961716,
+              "B_termination": "t_max",
+              "C_a_max_sim_m_s2": 155.56189754298796,
+              "C_a_max_sim_g": 15.862898904619618,
+              "C_a_max_rel_error": 0.4257758859788987,
+              "C_z_peak_sim_km": 43.78564597766152,
+              "C_z_peak_error_km": -3.0840676646615104,
+              "C_termination": "terminal_altitude",
+              "gravity_work_prediction": 0.0285585181615352,
+              "C_residual_after_gravity_prediction": 0.3972173678173635
+            },
+            {
+              "gamma_deg": -10.0,
+              "ve_anchored_m_s": 7000.068166930627,
+              "a_max_analytic_m_s2": 217.37910405103614,
+              "a_max_analytic_g": 22.16649967634576,
+              "z_peak_analytic_km": 41.906504377815644,
+              "B_a_max_sim_m_s2": 123.30912690248616,
+              "B_a_max_sim_g": 12.574031591061797,
+              "B_a_max_rel_error": -0.432746181189818,
+              "B_z_peak_sim_km": 46.7358154789685,
+              "B_z_peak_error_km": 4.829311101152853,
+              "B_termination": "t_max",
+              "C_a_max_sim_m_s2": 249.2017474436196,
+              "C_a_max_sim_g": 25.41150621706899,
+              "C_a_max_rel_error": 0.1463923753458482,
+              "C_z_peak_sim_km": 40.86455025364154,
+              "C_z_peak_error_km": -1.04195412417411,
+              "C_termination": "terminal_altitude",
+              "gravity_work_prediction": 0.030520783067451027,
+              "C_residual_after_gravity_prediction": 0.11587159227839718
+            },
+            {
+              "gamma_deg": -20.0,
+              "ve_anchored_m_s": 7000.034609174748,
+              "a_max_analytic_m_s2": 428.14914897089477,
+              "a_max_analytic_g": 43.65906287783237,
+              "z_peak_analytic_km": 37.02606826433912,
+              "B_a_max_sim_m_s2": 388.2066176230609,
+              "B_a_max_sim_g": 39.58605819755583,
+              "B_a_max_rel_error": -0.0932911613717797,
+              "B_z_peak_sim_km": 37.806351919515805,
+              "B_z_peak_error_km": 0.7802836551766813,
+              "B_termination": "velocity_floor",
+              "C_a_max_sim_m_s2": 455.85823691216564,
+              "C_a_max_sim_g": 46.48460349988688,
+              "C_a_max_rel_error": 0.06471830671127764,
+              "C_z_peak_sim_km": 36.71183109215728,
+              "C_z_peak_error_km": -0.3142371721818417,
+              "C_termination": "terminal_altitude",
+              "gravity_work_prediction": 0.03245302744679832,
+              "C_residual_after_gravity_prediction": 0.032265279264479314
+            },
+            {
+              "gamma_deg": -30.0,
+              "ve_anchored_m_s": 7000.023674051324,
+              "a_max_analytic_m_s2": 625.910227304224,
+              "a_max_analytic_g": 63.825080665081764,
+              "z_peak_analytic_km": 34.29195132007611,
+              "B_a_max_sim_m_s2": 602.4105131841246,
+              "B_a_max_sim_g": 61.42877671622059,
+              "B_a_max_rel_error": -0.03754486361616414,
+              "B_z_peak_sim_km": 34.594207338816084,
+              "B_z_peak_error_km": 0.3022560187399795,
+              "B_termination": "velocity_floor",
+              "C_a_max_sim_m_s2": 656.5954744995022,
+              "C_a_max_sim_g": 66.95410507150783,
+              "C_a_max_rel_error": 0.049024997286653375,
+              "C_z_peak_sim_km": 34.130713261507125,
+              "C_z_peak_error_km": -0.16123805856898252,
+              "C_termination": "terminal_altitude",
+              "gravity_work_prediction": 0.03353672426170673,
+              "C_residual_after_gravity_prediction": 0.015488273024946646
+            },
+            {
+              "gamma_deg": -45.0,
+              "ve_anchored_m_s": 7000.016740073938,
+              "a_max_analytic_m_s2": 885.1689786445055,
+              "a_max_analytic_g": 90.26211587489158,
+              "z_peak_analytic_km": 31.796621470060305,
+              "B_a_max_sim_m_s2": 873.850235560015,
+              "B_a_max_sim_g": 89.10792529151291,
+              "B_a_max_rel_error": -0.012787098686878237,
+              "B_z_peak_sim_km": 31.897780408893812,
+              "B_z_peak_error_km": 0.10115893883350872,
+              "B_termination": "velocity_floor",
+              "C_a_max_sim_m_s2": 922.6322993893107,
+              "C_a_max_sim_g": 94.08231143043861,
+              "C_a_max_rel_error": 0.04232335480415756,
+              "C_z_peak_sim_km": 31.70593417649597,
+              "C_z_peak_error_km": -0.09068729356433687,
+              "C_termination": "terminal_altitude",
+              "gravity_work_prediction": 0.034526550824138476,
+              "C_residual_after_gravity_prediction": 0.007796803980019085
+            },
+            {
+              "gamma_deg": -60.0,
+              "ve_anchored_m_s": 7000.0136682101365,
+              "a_max_analytic_m_s2": 1084.10521541899,
+              "a_max_analytic_g": 110.54796647366736,
+              "z_peak_analytic_km": 30.336947080870917,
+              "B_a_max_sim_m_s2": 1079.4161254539983,
+              "B_a_max_sim_g": 110.06981236752596,
+              "B_a_max_rel_error": -0.004325308926015378,
+              "B_z_peak_sim_km": 30.370945155128727,
+              "B_z_peak_error_km": 0.033998074257811824,
+              "B_termination": "terminal_altitude",
+              "C_a_max_sim_m_s2": 1127.7434823125195,
+              "C_a_max_sim_g": 114.99783129942637,
+              "C_a_max_rel_error": 0.0402527967515257,
+              "C_z_peak_sim_km": 30.270526741560044,
+              "C_z_peak_error_km": -0.06642033931087281,
+              "C_termination": "terminal_altitude",
+              "gravity_work_prediction": 0.035105908271656036,
+              "C_residual_after_gravity_prediction": 0.005146888479869667
+            },
+            {
+              "gamma_deg": -90.0,
+              "ve_anchored_m_s": 7000.011837015653,
+              "a_max_analytic_m_s2": 1251.8162209568106,
+              "a_max_analytic_g": 127.64972961784204,
+              "z_peak_analytic_km": 29.3012916200445,
+              "B_a_max_sim_m_s2": 1251.8162209548595,
+              "B_a_max_sim_g": 127.64972961764309,
+              "B_a_max_rel_error": -1.5586101828006986e-12,
+              "B_z_peak_sim_km": 29.301291653507924,
+              "B_z_peak_error_km": 3.34634241880849e-08,
+              "B_termination": "terminal_altitude",
+              "C_a_max_sim_m_s2": 1301.0243382878793,
+              "C_a_max_sim_g": 132.66756112310316,
+              "C_a_max_rel_error": 0.03930937825159118,
+              "C_z_peak_sim_km": 29.24723853026615,
+              "C_z_peak_error_km": -0.05405308977835011,
+              "C_termination": "terminal_altitude",
+              "gravity_work_prediction": 0.03551712460117405,
+              "C_residual_after_gravity_prediction": 0.0037922536504171253
+            }
+          ]
+        }
+      },
+      "Validation 3: USSA76 atmosphere vs the published standard table": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "max |dT/T| at the 8 layer boundaries",
+            "value": 1.5203165315333845e-16,
+            "threshold": 1e-09,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "max |dp/p| at the 8 layer boundaries",
+            "value": 1.7556788575488241e-07,
+            "threshold": 1e-06,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "max |drho/rho| at the 8 layer boundaries",
+            "value": 2.277552675091413e-05,
+            "threshold": 5e-05,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "median hydrostatic residual |dp/dz + rho g| / (rho g)",
+            "value": 1.0972144861640998e-09,
+            "threshold": 1e-08,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "max hydrostatic residual |dp/dz + rho g| / (rho g)",
+            "value": 5.799043441266246e-07,
+            "threshold": 1e-06,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "density discontinuity at the 86 km model seam",
+            "value": 8.350199882578658e-05,
+            "threshold": 0.001,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "sea-level speed of sound vs sqrt(gamma R T0)",
+            "value": 0.0,
+            "threshold": 1e-12,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "pressure monotonically decreasing (# violations)",
+            "value": 0.0,
+            "threshold": 1.0,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "density monotonically decreasing (# violations)",
+            "value": 0.0,
+            "threshold": 1.0,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "tabulated vs exact: max |drho/rho| (0-300 km)",
+            "value": 1.131041682664407e-06,
+            "threshold": 5e-06,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "tabulated vs exact: max |dT/T| (0-300 km)",
+            "value": 1.1478086263800438e-06,
+            "threshold": 5e-06,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "geopotential/geometric round-trip error",
+            "value": 2.9103830456733704e-11,
+            "threshold": 1e-07,
+            "comparison": "<",
+            "units": "m",
+            "passed": true
+          }
+        ],
+        "data": {
+          "layer_boundary_comparison": [
+            {
+              "geopotential_altitude_km": 0.0,
+              "geometric_altitude_km": 0.0,
+              "T_model_K": 288.15,
+              "T_reference_K": 288.15,
+              "T_rel_error": 0.0,
+              "p_model_Pa": 101325.0,
+              "p_reference_Pa": 101325.0,
+              "p_rel_error": 0.0,
+              "rho_model_kg_m3": 1.2249991558877122,
+              "rho_reference_kg_m3": 1.225,
+              "rho_rel_error": 6.890712553841087e-07
+            },
+            {
+              "geopotential_altitude_km": 11.0,
+              "geometric_altitude_km": 11.019067832000108,
+              "T_model_K": 216.64999999999998,
+              "T_reference_K": 216.65,
+              "T_rel_error": 1.3118721177200095e-16,
+              "p_model_Pa": 22632.063973462926,
+              "p_reference_Pa": 22632.06,
+              "p_rel_error": 1.7556788575488241e-07,
+              "rho_model_kg_m3": 0.3639177759115579,
+              "rho_reference_kg_m3": 0.36391,
+              "rho_rel_error": 2.1367677606749974e-05
+            },
+            {
+              "geopotential_altitude_km": 20.0,
+              "geometric_altitude_km": 20.06312368170136,
+              "T_model_K": 216.64999999999998,
+              "T_reference_K": 216.65,
+              "T_rel_error": 1.3118721177200095e-16,
+              "p_model_Pa": 5474.888669677783,
+              "p_reference_Pa": 5474.889,
+              "p_rel_error": 6.033404831602698e-08,
+              "rho_model_kg_m3": 0.08803480364710495,
+              "rho_reference_kg_m3": 0.088035,
+              "rho_rel_error": 2.23039580910291e-06
+            },
+            {
+              "geopotential_altitude_km": 32.0,
+              "geometric_altitude_km": 32.1619032229809,
+              "T_model_K": 228.64999999999998,
+              "T_reference_K": 228.65,
+              "T_rel_error": 1.2430224985962827e-16,
+              "p_model_Pa": 868.0186847552288,
+              "p_reference_Pa": 868.0187,
+              "p_rel_error": 1.7562722017795713e-08,
+              "rho_model_kg_m3": 0.01322499964410784,
+              "rho_reference_kg_m3": 0.013225,
+              "rho_rel_error": 2.6910560395261516e-08
+            },
+            {
+              "geopotential_altitude_km": 47.0,
+              "geometric_altitude_km": 47.35009222212044,
+              "T_model_K": 270.65,
+              "T_reference_K": 270.65,
+              "T_rel_error": 0.0,
+              "p_model_Pa": 110.90630555496605,
+              "p_reference_Pa": 110.9063,
+              "p_rel_error": 5.0087019868039794e-08,
+              "rho_model_kg_m3": 0.0014275325120644369,
+              "rho_reference_kg_m3": 0.0014275,
+              "rho_rel_error": 2.277552675091413e-05
+            },
+            {
+              "geopotential_altitude_km": 51.0,
+              "geometric_altitude_km": 51.41247962579011,
+              "T_model_K": 270.65,
+              "T_reference_K": 270.65,
+              "T_rel_error": 0.0,
+              "p_model_Pa": 66.93887311868744,
+              "p_reference_Pa": 66.93887,
+              "p_rel_error": 4.6590082043221115e-08,
+              "rho_model_kg_m3": 0.000861604912540554,
+              "rho_reference_kg_m3": 0.0008616,
+              "rho_rel_error": 5.701648739594752e-06
+            },
+            {
+              "geopotential_altitude_km": 71.0,
+              "geometric_altitude_km": 71.80197067469581,
+              "T_model_K": 214.64999999999998,
+              "T_reference_K": 214.65,
+              "T_rel_error": 1.3240954777733056e-16,
+              "p_model_Pa": 3.9564204280407327,
+              "p_reference_Pa": 3.95642,
+              "p_rel_error": 1.0818890123805053e-07,
+              "rho_model_kg_m3": 6.421098672004287e-05,
+              "rho_reference_kg_m3": 6.4211e-05,
+              "rho_rel_error": 2.068174787919164e-07
+            },
+            {
+              "geopotential_altitude_km": 84.852,
+              "geometric_altitude_km": 85.99995290624202,
+              "T_model_K": 186.94599999999997,
+              "T_reference_K": 186.946,
+              "T_rel_error": 1.5203165315333845e-16,
+              "p_model_Pa": 0.3733835899762162,
+              "p_reference_Pa": 0.3733836,
+              "p_rel_error": 2.684580630480992e-08,
+              "rho_model_kg_m3": 6.9578786607296045e-06,
+              "rho_reference_kg_m3": 6.9578e-06,
+              "rho_rel_error": 1.130540251298495e-05
+            }
+          ],
+          "sea_level_speed_of_sound_m_s": 340.2941077869353,
+          "hydrostatic_residual_max": 5.799043441266246e-07,
+          "hydrostatic_residual_median": 1.0972144861640998e-09,
+          "density_step_at_86km_rel": 8.350199882578658e-05,
+          "tabulated_max_rel_density_error": 1.131041682664407e-06,
+          "profile_samples": {
+            "altitude_km": [
+              0,
+              20,
+              40,
+              60,
+              80,
+              86,
+              100,
+              120,
+              150,
+              200
+            ],
+            "density_kg_m3": [
+              1.2249991558877122,
+              0.0889099150888865,
+              0.003995678140481704,
+              0.00030967780764751653,
+              1.8458032036858147e-05,
+              6.9578237813324895e-06,
+              5.674189615351008e-07,
+              2.1019253726463792e-08,
+              1.6516207428509133e-09,
+              1.4414564340703029e-10
+            ],
+            "temperature_K": [
+              288.15,
+              216.64999999999998,
+              250.3496461024211,
+              247.02088477279673,
+              198.63857625086882,
+              186.94590831018849,
+              195.08134433524688,
+              360.0,
+              634.3920331113535,
+              854.559090798055
+            ]
+          }
+        }
+      },
+      "Validation 4: energy budget, RK4 convergence order and integrator cross-check": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "A. ballistic: |dE + W_drag| / |dE|",
+            "value": 8.877565105817203e-15,
+            "threshold": 1e-10,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "A. lifting:   |dE + W_drag| / |dE|",
+            "value": 9.528793360456687e-14,
+            "threshold": 1e-10,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "B. RK4 observed order (finest pair)",
+            "value": 4.007978499825699,
+            "threshold": 3.8,
+            "comparison": ">",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "B. RK4 observed order (finest pair) upper bound",
+            "value": 4.007978499825699,
+            "threshold": 4.3,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "B. mean observed order over all refinements",
+            "value": 4.018076380472692,
+            "threshold": 3.9,
+            "comparison": ">",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "B. RK4 relative error at n=4000 (dt = 25 ms)",
+            "value": 6.284047156508783e-12,
+            "threshold": 1e-10,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "C. DOP853 vs RK4 (dt=7.5 ms): altitude difference",
+            "value": 4.631467163562775e-06,
+            "threshold": 1.0,
+            "comparison": "<",
+            "units": "m",
+            "passed": true
+          },
+          {
+            "name": "C. DOP853 vs RK4 (dt=7.5 ms): speed difference",
+            "value": 2.692464704523445e-07,
+            "threshold": 0.001,
+            "comparison": "<",
+            "units": "m/s",
+            "passed": true
+          },
+          {
+            "name": "D. peak heat flux converged at rtol=1e-10",
+            "value": 5.648364143396625e-10,
+            "threshold": 1e-07,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "D. total heat load converged at rtol=1e-10",
+            "value": 3.395305795186663e-10,
+            "threshold": 1e-07,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          },
+          {
+            "name": "D. peak heat flux still accurate at a loose rtol=1e-6",
+            "value": 2.2214158820223005e-06,
+            "threshold": 0.0001,
+            "comparison": "<",
+            "units": "",
+            "passed": true
+          }
+        ],
+        "data": {
+          "energy_budget": {
+            "ballistic": {
+              "delta_specific_energy_J_per_kg": -31472230.172839083,
+              "drag_work_J_per_kg": 31472230.172838803,
+              "relative_closure": 8.877565105817203e-15
+            },
+            "lifting": {
+              "delta_specific_energy_J_per_kg": -31471547.097523734,
+              "drag_work_J_per_kg": 31471547.097520735,
+              "relative_closure": 9.528793360456687e-14
+            }
+          },
+          "rk4_convergence": {
+            "window_s": 100.0,
+            "steps": [
+              125,
+              250,
+              500,
+              1000,
+              2000,
+              4000
+            ],
+            "normalised_error": [
+              7.015312350254893e-06,
+              4.2566159899798914e-07,
+              2.6197683728555506e-08,
+              1.6244891966968697e-09,
+              1.0110233497759671e-10,
+              6.284047156508783e-12
+            ],
+            "observed_orders": [
+              4.04272849135944,
+              4.022195777003814,
+              4.011381206850703,
+              4.006097927323807,
+              4.007978499825699
+            ],
+            "note": "Refining beyond n=4000 (dt=25 ms) saturates against the accuracy of the DOP853 reference itself (~3e-12 relative), so the study stops there."
+          },
+          "integrator_cross_check": {
+            "window_s": 150.0,
+            "rk4_steps": 20000,
+            "altitude_difference_m": 4.631467163562775e-06,
+            "speed_difference_m_s": 2.692464704523445e-07
+          },
+          "tolerance_study": [
+            {
+              "rtol": 1e-06,
+              "peak_q_rel_error": 2.2214158820223005e-06,
+              "heat_load_rel_error": 2.5583076977230654e-06,
+              "n_rhs_evals": 1172
+            },
+            {
+              "rtol": 1e-08,
+              "peak_q_rel_error": 1.3034216174747777e-09,
+              "heat_load_rel_error": 1.6445351806360042e-08,
+              "n_rhs_evals": 2210
+            },
+            {
+              "rtol": 1e-10,
+              "peak_q_rel_error": 5.648364143396625e-10,
+              "heat_load_rel_error": 3.395305795186663e-10,
+              "n_rhs_evals": 15557
+            }
+          ]
+        }
+      }
+    }
+  },
+  "headline": {
+    "peak_stagnation_heat_flux_W_cm2": 155.10561207041698,
+    "peak_heat_flux_altitude_km": 55.178159512505864,
+    "peak_wall_temperature_K": 2381.7666636815306,
+    "peak_deceleration_g": 15.57444101551618,
+    "total_heat_load_J_cm2": 7513.4367807646695,
+    "lifting_peak_deceleration_g": 7.85367500075314,
+    "lifting_downrange_km": 1533.1484386206987,
+    "allen_eggers_exact_limit_rel_error": -2.5436263237101784e-09,
+    "allen_eggers_profile_agreement": 5.113435611552177e-11,
+    "orbit_energy_drift": 7.59375192771368e-16,
+    "kepler_period_closure_m": 1.0919992857564472e-08,
+    "energy_budget_closure_ballistic": 8.877565105817203e-15,
+    "rk4_observed_order": 4.007978499825699
+  },
+  "artifacts": {
+    "results/cases.json": 3915,
+    "results/corridor.json": 60342,
+    "results/summary.json": 37532,
+    "results/traj_ballistic.npz": 830352,
+    "results/traj_lifting.npz": 839649,
+    "validation/val_01_orbit_energy.json": 4757,
+    "validation/val_01_orbit_energy.txt": 2752,
+    "validation/val_02_allen_eggers.json": 12161,
+    "validation/val_02_allen_eggers.txt": 3777,
+    "validation/val_03_atmosphere_table.json": 8927,
+    "validation/val_03_atmosphere_table.txt": 2806,
+    "validation/val_04_energy_convergence.json": 6203,
+    "validation/val_04_energy_convergence.txt": 3244,
+    "validation/validation_report.json": 35516,
+    "validation/validation_report.txt": 12624,
+    "figures/fig1_entry_corridor.png": 171415,
+    "figures/fig2_heating.png": 176400,
+    "figures/fig3_loads.png": 112999,
+    "figures/fig4_allen_eggers.png": 143840,
+    "figures/fig5_atmosphere_validation.png": 127410,
+    "figures/fig6_aerodynamics.png": 148942,
+    "media/hero.mp4": 3047610,
+    "media/hero.png": 469238,
+    "media/hero_manifest.json": 1101
+  }
+}

@@ -15,7 +15,7 @@ Chain
 4. Normalise each colour to unit maximum channel (the *brightness* of the trail
    is carried separately by the heat flux; this function supplies hue only).
 
-Self-consistency is checked in ``tests/test_blackbody.py``: the locus must pass
+Self-consistency is checked in ``tests/test_heating_and_colour.py``: the locus must pass
 close to the D65-ish white point near 6500 K, must be red-dominant below
 ~3500 K and blue-dominant above ~10000 K, and the chromaticity must vary
 monotonically with temperature.

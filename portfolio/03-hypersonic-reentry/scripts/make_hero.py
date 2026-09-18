@@ -52,6 +52,7 @@ SCENE_KW = dict(
     wake_halo_gain=2.8,
     persistence_s=55.0,
     head_gain=55.0,
+    n_stars=8000,
 )
 
 

@@ -40,7 +40,6 @@ import numpy as np
 from _bootstrap import check, finish, main  # noqa: E402
 
 from reentry import Vehicle, simulate  # noqa: E402
-from reentry.aerodynamics import SphereCone  # noqa: E402
 from reentry.atmosphere import ExponentialAtmosphere, USSA76  # noqa: E402
 from reentry.constants import MU_EARTH, R_EARTH  # noqa: E402
 from reentry.dynamics import EntryModel  # noqa: E402

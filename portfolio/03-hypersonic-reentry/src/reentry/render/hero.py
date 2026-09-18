@@ -25,7 +25,7 @@ import numpy as np
 from ..atmosphere import USSA76
 from ..blackbody import make_blackbody_lut
 from ..constants import RHO_SL, R_EARTH, SIGMA_SB
-from .compose import bloom, splat, tonemap, upsample_bilinear
+from .compose import splat, tonemap, upsample_bilinear
 from .raymarch import (
     RAYLEIGH_BETA,
     build_noise_volumes,
@@ -42,11 +42,6 @@ R_ATMOS = R_EARTH + 140.0e3
 def _norm(v):
     v = np.asarray(v, dtype=float)
     return v / np.linalg.norm(v)
-
-
-def _smoothstep(x):
-    x = np.clip(x, 0.0, 1.0)
-    return x * x * (3.0 - 2.0 * x)
 
 
 def _ease(x):
@@ -69,16 +64,16 @@ class CameraPath:
     ease.
     """
 
-    start_offset: tuple = (2.6e5, 5.0e5, 1.85e6)
-    end_offset: tuple = (1.5e5, 1.2e5, 1.30e6)
-    start_fov_deg: float = 27.0
-    end_fov_deg: float = 22.0
-    start_roll_deg: float = -6.0
-    end_roll_deg: float = 3.0
-    start_aim_blend: float = 0.62
-    end_aim_blend: float = 0.50
-    start_yaw_deg: float = -5.0
-    end_yaw_deg: float = 4.0
+    start_offset: tuple = (1.25e6, 0.45e6, 3.60e6)
+    end_offset: tuple = (0.72e6, 0.05e6, 2.50e6)
+    start_fov_deg: float = 17.5
+    end_fov_deg: float = 12.5
+    start_roll_deg: float = -27.0
+    end_roll_deg: float = -16.0
+    start_aim_blend: float = 0.58
+    end_aim_blend: float = 0.68
+    start_yaw_deg: float = -7.0
+    end_yaw_deg: float = 3.0
     anchor_lag_s: float = 16.0
 
     def at(self, s):
@@ -114,15 +109,15 @@ class HeroScene:
     emissivity: float = 0.85
     sun_azimuth_deg: float = -78.0
     sun_elevation_deg: float = -11.0
-    sun_intensity: float = 22.0
+    sun_intensity: float = 2.6
     ground_gain: float = 1.0
     ambient_night: float = 0.0035
-    city_gain: float = 0.10
-    wake_halo_gain: float = 2.2
+    city_gain: float = 0.12
+    wake_halo_gain: float = 2.8
     head_gain: float = 55.0
     persistence_s: float = 55.0
     trail_samples: int = 26_000
-    n_stars: int = 5200
+    n_stars: int = 8000
     seed: int = 11
     camera: CameraPath = field(default_factory=CameraPath)
 

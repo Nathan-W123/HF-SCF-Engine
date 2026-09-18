@@ -48,7 +48,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .atmosphere import AtmosphereBase, USSA76
+from .atmosphere import AtmosphereBase
 from .constants import MU_EARTH, R_EARTH
 from .heating import heat_flux_sutton_graves
 from .vehicle import Vehicle
@@ -74,9 +74,12 @@ class EntryModel:
         If False the gravity terms are dropped entirely.  Used only to reproduce
         the Allen-Eggers idealisation exactly.
     curvature : bool
-        If False the ``V^2/r`` centrifugal term in ``dgamma/dt`` is dropped and
-        the flight-path angle is frozen, reproducing the Allen-Eggers flat-Earth,
-        constant-gamma idealisation exactly.
+        If False the ``V^2/r`` centrifugal term in ``dgamma/dt`` and the
+        ``tan(lat)`` heading term in ``dpsi/dt`` are dropped.
+    freeze_gamma : bool
+        If True the flight-path angle is held constant.  Together with
+        ``include_gravity=False`` and ``curvature=False`` this reproduces the
+        Allen-Eggers flat-Earth, constant-gamma idealisation exactly.
     constant_cd : float or None
         If set, overrides the Newtonian aerodynamic model with a constant drag
         coefficient (and zero lift).  Used for the Allen-Eggers benchmark.

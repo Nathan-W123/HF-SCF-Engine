@@ -1,0 +1,51 @@
+{
+  "source_trajectory": "results/traj_ballistic.npz",
+  "still_time_s": 87.20134237309917,
+  "still_altitude_km": 55.178159512505864,
+  "still_velocity_m_s": 6727.3202101074985,
+  "still_heat_flux_W_cm2": 155.10561207041698,
+  "still_wall_temperature_K": 2381.7666636815306,
+  "video_window_s": [
+    30.0,
+    195.0
+  ],
+  "video_duration_s": 18.0,
+  "video_fps": 30,
+  "video_frames": 540,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "camera": {
+    "start_offset": [
+      1250000.0,
+      450000.0,
+      3600000.0
+    ],
+    "end_offset": [
+      720000.0,
+      50000.0,
+      2500000.0
+    ],
+    "start_fov_deg": 17.5,
+    "end_fov_deg": 12.5,
+    "start_roll_deg": -27.0,
+    "end_roll_deg": -16.0,
+    "start_aim_blend": 0.58,
+    "end_aim_blend": 0.68,
+    "start_yaw_deg": -7.0,
+    "end_yaw_deg": 3.0,
+    "anchor_lag_s": 16.0
+  },
+  "scene": {
+    "sun_intensity": 2.6,
+    "sun_elevation_deg": -11.0,
+    "sun_azimuth_deg": -78.0,
+    "ambient_night": 0.0035,
+    "city_gain": 0.12,
+    "wake_halo_gain": 2.8,
+    "persistence_s": 55.0,
+    "head_gain": 55.0,
+    "n_stars": 8000
+  }
+}

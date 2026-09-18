@@ -25,8 +25,7 @@ from _bootstrap import (  # noqa: E402
 )
 
 from reentry.aerodynamics import SphereCone, cp_max  # noqa: E402
-from reentry.atmosphere import USSA76, USSA76_REFERENCE_TABLE, geometric_altitude  # noqa: E402
-from reentry.constants import G0, R_AIR  # noqa: E402
+from reentry.atmosphere import USSA76  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Shared style: dark, high-contrast, no chartjunk.
@@ -184,7 +183,7 @@ def fig_heating(bal, lif):
     ax2b.tick_params(axis="y", colors=C_ACCENT)
     ax2b.grid(False)
     ax2.set_title("Integrated heat load (solid) and wall temperature (dashed)")
-    ax2.legend(fontsize=9, loc="center right")
+    ax2.legend(fontsize=9, loc="upper left")
     _save(fig, "fig2_heating.png")
 
 
@@ -326,7 +325,7 @@ def fig_aero():
     ax1.text(0.09, 0.15, "outside Newtonian validity", color=C_ALT, fontsize=8)
     ax1.set_xlabel("Mach number")
     ax1.set_ylabel("coefficient")
-    ax1.set_title("Modified-Newtonian Mach dependence (Rayleigh pitot $C_{p,max}$)")
+    ax1.set_title("Mach dependence from the Rayleigh pitot $C_{p,max}$")
     ax1.legend(fontsize=9, loc="lower right")
     ax1.set_ylim(0, 2.0)
 
@@ -337,12 +336,15 @@ def fig_aero():
     i20 = int(np.argmin(np.abs(np.degrees(alphas) + 20.0)))
     ax2.plot(-20.0, cl_a[i20] / cd_a[i20], "o", color="white", ms=5)
     ax2.annotate(f"trim: $L/D$ = {cl_a[i20] / cd_a[i20]:.3f}",
-                 (-20.0, cl_a[i20] / cd_a[i20]), xytext=(8, -14),
+                 (-20.0, cl_a[i20] / cd_a[i20]), xytext=(10, 22),
                  textcoords="offset points", color=FG, fontsize=9)
     ax2.set_xlabel("angle of attack [deg]")
     ax2.set_ylabel("coefficient (area $\\pi R_b^2$ = 5.31 m$^2$)")
-    ax2.set_title("Newtonian surface integrals at M = 25, 70° sphere-cone")
+    ax2.set_title("Surface integrals at M = 25")
     ax2.legend(fontsize=9)
+    fig.suptitle(
+        "Modified-Newtonian aerodynamics of the 70° sphere-cone aeroshell "
+        "($R_n$ = 0.65 m, $R_b$ = 1.30 m)", fontsize=13, y=1.03)
     _save(fig, "fig6_aerodynamics.png")
 
 

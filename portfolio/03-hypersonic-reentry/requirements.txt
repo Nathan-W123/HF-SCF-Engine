@@ -1,0 +1,11 @@
+# Exact versions this project was developed and validated against
+# (Python 3.11.15).  No network access is needed at runtime.
+numpy==2.4.6
+scipy==1.17.1
+matplotlib==3.11.2
+numba==0.67.0
+pytest==9.1.1
+imageio==2.37.4
+imageio-ffmpeg==0.6.0
+Pillow==12.3.0
+tqdm==4.70.1

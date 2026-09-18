@@ -1,0 +1,321 @@
+{
+  "package_version": "1.0.0",
+  "quick": false,
+  "scenarios": {
+    "failure": {
+      "R_collision_m": 15.0,
+      "R_min_m": 60.0,
+      "V_max_flown": 27.023922556771936,
+      "V_min_flown": 18.15747581386674,
+      "V_within_limits": true,
+      "abs_gamma_max_deg": 11.998995388620012,
+      "abs_phi_max_deg": 44.99999995790053,
+      "colliding_pairs": 0,
+      "collisions": 0,
+      "control_effort_max_rad_s": 65.36460601106735,
+      "control_effort_mean_rad_s": 5.565980829984871,
+      "duration_s": 289.90000000000003,
+      "gamma_within_limits": true,
+      "goal_completion": 0.9722222222222222,
+      "load_factor_max": 1.414213561333967,
+      "load_factor_within_limits": true,
+      "max_deflection_mps": 58.96408051750088,
+      "mean_deflection_mps": 0.6022593540331126,
+      "min_separation_m": 64.93687522196518,
+      "min_separation_pair": [
+        11,
+        16
+      ],
+      "min_separation_time_s": 94.60000000000001,
+      "min_zone_clearance_m": null,
+      "n_reached": 35,
+      "n_vehicles": 36,
+      "path_efficiency_all_vehicles_mean": 1.0279722393290522,
+      "path_efficiency_max": 1.029267417806711,
+      "path_efficiency_mean": 1.0070655319993989,
+      "phi_within_limits": true,
+      "plan_failures": 0,
+      "plan_length_over_direct_mean": 1.0,
+      "qp_fallback_events": 98,
+      "qp_infeasible_events": 98,
+      "sampling_gap_m": 5.404784511354388,
+      "scenario": "failure",
+      "separation_margin_m": 4.936875221965181,
+      "separation_violation_samples": 0,
+      "time_to_completion_s": null,
+      "violating_pairs": 0,
+      "wall_time_s": 23.36047673225403,
+      "wind": {
+        "dryden": {
+          "L_u": 200.0,
+          "L_v": 200.0,
+          "L_w": 100.0,
+          "sigma_u": 1.5,
+          "sigma_v": 1.5,
+          "sigma_w": 1.0
+        },
+        "mean_enu_mps": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "turbulence_on": false
+      },
+      "zone_incursion_samples": 0
+    },
+    "gust": {
+      "R_collision_m": 15.0,
+      "R_min_m": 60.0,
+      "V_max_flown": 33.99999968097382,
+      "V_min_flown": 18.000449408635298,
+      "V_within_limits": true,
+      "abs_gamma_max_deg": 11.999302206938255,
+      "abs_phi_max_deg": 44.99999999974942,
+      "colliding_pairs": 0,
+      "collisions": 0,
+      "control_effort_max_rad_s": 24.20192052646126,
+      "control_effort_mean_rad_s": 17.451543318948634,
+      "duration_s": 389.90000000000003,
+      "gamma_within_limits": true,
+      "goal_completion": 1.0,
+      "load_factor_max": 1.4142135623669099,
+      "load_factor_within_limits": true,
+      "max_deflection_mps": 27.922065216974783,
+      "mean_deflection_mps": 0.29434536237253467,
+      "min_separation_m": 65.6839083389682,
+      "min_separation_pair": [
+        14,
+        15
+      ],
+      "min_separation_time_s": 271.7,
+      "min_zone_clearance_m": 42.17968611193237,
+      "n_reached": 32,
+      "n_vehicles": 32,
+      "path_efficiency_all_vehicles_mean": 1.0204799123955932,
+      "path_efficiency_max": 1.0353644499559358,
+      "path_efficiency_mean": 1.0204799123955932,
+      "phi_within_limits": true,
+      "plan_failures": 0,
+      "plan_length_over_direct_mean": 1.0078055730798274,
+      "qp_fallback_events": 4,
+      "qp_infeasible_events": 4,
+      "sampling_gap_m": 10.23053711102358,
+      "scenario": "gust",
+      "separation_margin_m": 5.683908338968195,
+      "separation_violation_samples": 0,
+      "time_to_completion_s": 328.70000000000005,
+      "violating_pairs": 0,
+      "wall_time_s": 33.922527551651,
+      "wind": {
+        "dryden": {
+          "L_u": 200.0,
+          "L_v": 200.0,
+          "L_w": 100.0,
+          "sigma_u": 3.9000000000000004,
+          "sigma_v": 3.9000000000000004,
+          "sigma_w": 2.6
+        },
+        "mean_enu_mps": [
+          -7.0,
+          4.5,
+          0.0
+        ],
+        "turbulence_on": true
+      },
+      "zone_incursion_samples": 0
+    },
+    "swap": {
+      "R_collision_m": 15.0,
+      "R_min_m": 60.0,
+      "V_max_flown": 27.037857320000274,
+      "V_min_flown": 18.109168157002262,
+      "V_within_limits": true,
+      "abs_gamma_max_deg": 11.952255928336553,
+      "abs_phi_max_deg": 44.999999925460415,
+      "colliding_pairs": 0,
+      "collisions": 0,
+      "control_effort_max_rad_s": 7.730178007483014,
+      "control_effort_mean_rad_s": 3.6276594400097,
+      "duration_s": 289.90000000000003,
+      "gamma_within_limits": true,
+      "goal_completion": 1.0,
+      "load_factor_max": 1.414213560533258,
+      "load_factor_within_limits": true,
+      "max_deflection_mps": 58.96218317369874,
+      "mean_deflection_mps": 0.6088505567876157,
+      "min_separation_m": 68.985720294575,
+      "min_separation_pair": [
+        24,
+        26
+      ],
+      "min_separation_time_s": 85.2,
+      "min_zone_clearance_m": null,
+      "n_reached": 36,
+      "n_vehicles": 36,
+      "path_efficiency_all_vehicles_mean": 1.0062713926098243,
+      "path_efficiency_max": 1.0263957503192436,
+      "path_efficiency_mean": 1.0062713926098243,
+      "phi_within_limits": true,
+      "plan_failures": 0,
+      "plan_length_over_direct_mean": 1.0,
+      "qp_fallback_events": 138,
+      "qp_infeasible_events": 138,
+      "sampling_gap_m": 5.407571464000055,
+      "scenario": "swap",
+      "separation_margin_m": 8.985720294575003,
+      "separation_violation_samples": 0,
+      "time_to_completion_s": 172.0,
+      "violating_pairs": 0,
+      "wall_time_s": 23.888580083847046,
+      "wind": {
+        "dryden": {
+          "L_u": 200.0,
+          "L_v": 200.0,
+          "L_w": 100.0,
+          "sigma_u": 1.5,
+          "sigma_v": 1.5,
+          "sigma_w": 1.0
+        },
+        "mean_enu_mps": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "turbulence_on": false
+      },
+      "zone_incursion_samples": 0
+    },
+    "transit": {
+      "R_collision_m": 15.0,
+      "R_min_m": 60.0,
+      "V_max_flown": 28.497226656465745,
+      "V_min_flown": 18.336167832843945,
+      "V_within_limits": true,
+      "abs_gamma_max_deg": 11.998028075713314,
+      "abs_phi_max_deg": 44.99999999968797,
+      "colliding_pairs": 0,
+      "collisions": 0,
+      "control_effort_max_rad_s": 4.0834872641437885,
+      "control_effort_mean_rad_s": 1.9493420928068488,
+      "duration_s": 389.90000000000003,
+      "gamma_within_limits": true,
+      "goal_completion": 1.0,
+      "load_factor_max": 1.4142135623653933,
+      "load_factor_within_limits": true,
+      "max_deflection_mps": 23.229843375098177,
+      "mean_deflection_mps": 0.27180650990773336,
+      "min_separation_m": 68.44026226265999,
+      "min_separation_pair": [
+        30,
+        31
+      ],
+      "min_separation_time_s": 389.90000000000003,
+      "min_zone_clearance_m": 58.28095890269498,
+      "n_reached": 32,
+      "n_vehicles": 32,
+      "path_efficiency_all_vehicles_mean": 1.01088327959454,
+      "path_efficiency_max": 1.023825914312888,
+      "path_efficiency_mean": 1.01088327959454,
+      "phi_within_limits": true,
+      "plan_failures": 0,
+      "plan_length_over_direct_mean": 1.0078055730798274,
+      "qp_fallback_events": 0,
+      "qp_infeasible_events": 0,
+      "sampling_gap_m": 6.100604597776474,
+      "scenario": "transit",
+      "separation_margin_m": 8.440262262659985,
+      "separation_violation_samples": 0,
+      "time_to_completion_s": 314.6,
+      "violating_pairs": 0,
+      "wall_time_s": 33.586477756500244,
+      "wind": {
+        "dryden": {
+          "L_u": 200.0,
+          "L_v": 200.0,
+          "L_w": 100.0,
+          "sigma_u": 1.5,
+          "sigma_v": 1.5,
+          "sigma_w": 1.0
+        },
+        "mean_enu_mps": [
+          0.0,
+          3.0,
+          0.0
+        ],
+        "turbulence_on": false
+      },
+      "zone_incursion_samples": 0
+    }
+  },
+  "sweep": {
+    "mean_goal_completion": 1.0,
+    "mean_path_efficiency": 1.0162854847265712,
+    "min_separation_over_all_runs_m": 44.62201614268314,
+    "total_collisions": 0,
+    "total_separation_violation_samples": 62,
+    "total_zone_incursion_samples": 0,
+    "worst_goal_completion": 1.0
+  },
+  "total_wall_time_s": 660.5619814395905,
+  "validation": {
+    "collision_avoidance": {
+      "all_passed": true,
+      "checks": {
+        "envelope_respected": true,
+        "orca_reciprocity_u_A_eq_minus_u_B": true,
+        "qp_matches_slsqp_to_1e-6": true,
+        "reciprocal_split_lands_on_the_obstacle_boundary": true,
+        "reciprocal_split_resolves_every_conflict": true,
+        "stress_test_all_goals_reached": true,
+        "stress_test_min_separation_ge_R_min": true,
+        "stress_test_zero_collisions": true
+      }
+    },
+    "deterministic_regression": {
+      "all_passed": true,
+      "checks": {
+        "matches_stored_reference_within_1e-9": true,
+        "same_process_reruns_bit_identical": true
+      }
+    },
+    "dryden_turbulence": {
+      "all_passed": true,
+      "checks": {
+        "u_log10_psd_rms_lt_0.05_decades": true,
+        "u_median_psd_ratio_within_8pct": true,
+        "u_rms_within_3pct": true,
+        "v_log10_psd_rms_lt_0.05_decades": true,
+        "v_median_psd_ratio_within_8pct": true,
+        "v_rms_within_3pct": true,
+        "w_log10_psd_rms_lt_0.05_decades": true,
+        "w_median_psd_ratio_within_8pct": true,
+        "w_rms_within_3pct": true
+      }
+    },
+    "tracking_convergence": {
+      "all_passed": true,
+      "checks": {
+        "circle_all_releases_settle": true,
+        "circle_steady_state_xte_lt_0.05m": true,
+        "no_divergence": true,
+        "straight_all_releases_settle": true,
+        "straight_steady_state_xte_lt_0.01m": true
+      }
+    },
+    "vehicle_dynamics": {
+      "all_passed": true,
+      "checks": {
+        "accel_within_limit": true,
+        "airspeed_within_limits": true,
+        "bank_within_limit": true,
+        "gamma_rate_within_limit": true,
+        "gamma_within_limit": true,
+        "load_factor_within_limit": true,
+        "rk4_order_between_3.7_and_4.3": true,
+        "roll_rate_within_limit": true,
+        "turn_radius_matches_analytic_rel_err_lt_1e-6": true
+      }
+    }
+  },
+  "validation_all_passed": true
+}

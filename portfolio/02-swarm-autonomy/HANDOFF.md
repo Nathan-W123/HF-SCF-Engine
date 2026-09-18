@@ -9,7 +9,7 @@ from real simulation output.
 
 | item | state |
 |---|---|
-| `make all` from scratch | clean, **18.5 min** wall on 4 cores (measured with another job competing for the same cores) |
+| `make all` from scratch | clean, exit 0, **11.0 min** wall on 4 cores (18.5 min when another job was competing for the same cores) |
 | `pytest` | **97 test cases** (78 test functions, 8 files), **22 s** |
 | validation | **33 checks, all pass**, outputs in `validation/*.json` |
 | figures | 6 PNGs in `figures/` |
@@ -58,7 +58,7 @@ all four scenarios; envelope respected throughout (peak load factor 1.414 vs a
 | `transit` | 32 | 68.4 m | 32/32 by 314.6 s | 1.011 | 0 |
 | `swap` | 36 | **69.0 m** | 36/36 by 172.0 s | **1.006** | 138 |
 | `gust` | 32 | 65.7 m | 32/32 by 328.7 s | 1.020 | 4 |
-| `failure` | 36 | 64.9 m | 35/36 (the failed vehicle is the exception) | 1.007 | 98 |
+| `failure` | 36 | 64.9 m (94.8 m to the rogue) | 35/36 (the failed vehicle is the exception) | 1.007 | 98 |
 
 Robustness sweep, 4 turbulence levels × 5 seeds (20 runs): zero collisions, zero
 zone incursions, 100 % goal completion, mean path efficiency 1.016. Worst min
@@ -81,8 +81,10 @@ separation by level: 60.9 / 58.8 / 63.5 / **44.6** m at σ_w = 0 / 1 / 2 / 3 m/s
    partial degradation or simultaneous failures.
 6. **Planning is horizontal and obstacles are discs**; no polygons or terrain.
 7. **Vertical separation does a lot of the work** — minimum *horizontal*
-   separation reaches 0.5 m in the stress test while 3-D separation stays above
-   69 m, i.e. vehicles pass over and under each other.
+   separation reaches 0.23 m in the stress test (with 150 m of vertical spacing
+   at that instant), i.e. vehicles pass over and under each other. At the
+   tightest 3-D encounter the 69.0 m splits as 51.5 m horizontal / 45.9 m
+   vertical.
 8. **Safety is measured on 10 Hz samples**; the sampling-gap bound (5.4 m) is
    reported, giving a guaranteed continuous-time margin of ≥ 63.6 m.
 9. **The QP's hard rows were jointly infeasible on 0.13 % of vehicle-steps** in

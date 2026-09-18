@@ -418,16 +418,22 @@ limits).
 | `failure` | 36 | 290 s | 64.9 m (t = 94.6 s) | +4.9 m | 35/36 | — | 1.007 / 1.029 | 5.57 rad·s | 98 |
 
 In `failure` the one vehicle that does not reach its goal *is* the failed one —
-it has no control authority from t = 40 s. The other 35 all complete, and the
-closest any of them comes to the tumbling non-cooperative aircraft is 64.9 m.
+it has no control authority from t = 40 s. The other 35 all complete. The
+closest any vehicle comes to the non-cooperative aircraft is **94.8 m**, well
+clear: because a rogue neighbour is given the full avoidance share instead of
+half, the cooperative vehicles give it a wide berth. The 64.9 m minimum is
+between two *cooperative* vehicles (11 and 16, at t = 94.6 s) working around the
+disruption it causes — which is the cost of one uncooperative agent, paid by
+everyone else.
 
 **The headline number.** In the stress test every one of 36 nominal routes runs
 through a single point. The swarm holds 69.0 m of separation against a 60 m
 requirement, loses nobody, and pays **0.6 % in path length** to do it. The
-deconfliction is not free — peak commanded deflection reaches 59.0 m/s and the
-swarm spreads over 400 m laterally at the crossing — but because the braking
-barrier makes vehicles react at range rather than late, the corrections are
-early, small and almost entirely recovered.
+deconfliction is not free — peak commanded deflection reaches 59.0 m/s, airspeed
+is modulated from 27.0 down to 18.1 m/s, and vehicles deviate up to 164 m from
+their direct line (61 m on average) — but because the braking barrier makes them
+react at range rather than late, the corrections are early and almost entirely
+recovered by the time they reach their goals.
 
 ### Robustness sweep
 
@@ -449,10 +455,12 @@ against the disturbance.
 
 ### Cost
 
-`make all` on 4 cores: **18.5 min** wall (scenarios 34 s, sweep ~2 min,
-validation ~2 min, figures ~20 s, hero render + H.264 encode ~13 min), measured
-while another job was competing for the same cores. `pytest`: **97 test cases
-from 78 test functions in 22 s**.
+`make all` on 4 cores, from a clean tree: **11.0 min** wall — scenarios 34 s
+(four in parallel), robustness sweep 20 runs ~2 min, validation ~2 min, figures
+20 s, hero render + H.264 encode 6.1 min. An earlier identical run measured
+18.5 min while another job was competing for the same four cores, so treat
+11 min as the free-machine figure and ~19 min as the contended one.
+`pytest`: **97 test cases from 78 test functions, 22 s**.
 
 ---
 
@@ -551,10 +559,12 @@ argument is specific to circular obstacles; a polygonal workspace needs a
 different (standard, but different) visibility graph.
 
 **9. Vertical separation does a lot of the work.** In the stress test the
-minimum *horizontal* separation reaches 0.5 m while the 3-D separation stays
-above 69 m — that is, vehicles pass directly over and under one another with
-~50 m of vertical spacing. That is normal aviation practice, but it means the
-result depends on the altitude assignment being respected, and a system with a
+minimum *horizontal* separation reaches 0.23 m — two aircraft pass directly over
+one another — but with 150 m of vertical spacing at that instant, so the 3-D
+separation is never at risk there. At the genuinely tightest encounter (68.99 m)
+the split is 51.5 m horizontal and 45.9 m vertical, i.e. both axes contribute.
+Passing over and under is normal aviation practice, but it does mean the result
+leans on the altitude assignment being available, and a swarm confined to a
 tighter altitude band would be a harder problem.
 
 **10. The head-on tie-break is a design choice, not an optimum.** It resolves

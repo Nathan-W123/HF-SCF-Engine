@@ -1,9 +1,16 @@
 # HANDOFF — 01-galaxy-collision
 
 **Status: complete.** `make all` runs the whole project from an empty checkout
-(no network) in ≈ 20 minutes on 4 cores and exits 0. `make test` runs 58 pytest
-tests in ~10 s. Every number below is read back from an artifact the pipeline
-wrote (`results/summary.json`, `results/morphology.json`, `validation/*.json`).
+(no network) and exits 0 — verified from a `make distclean` state. It took
+25.7 min on the recorded run, which shared its four cores with two other
+pipelines; the same stages on an idle machine take ≈ 13 min (simulation stage
+7.16 min vs 14.47 min). `make test` runs 58 pytest tests in ~6 s. Every number
+below is read back from an artifact the pipeline wrote (`results/summary.json`,
+`results/morphology.json`, `validation/*.json`).
+
+The pipeline is fully deterministic: two independent full runs produced
+byte-identical `media/hero.mp4` and identical validation numbers to every
+digit.
 
 ## Headline result
 
@@ -15,9 +22,10 @@ gone from a thin disk (**c/a = 0.216**) to a triaxial spheroid
 Newtonian gravity alone. The longest tidal tail reaches **130 kpc**; 8.4 % of
 the stellar mass ends up beyond 30 kpc.
 
-Simulation cost: **7.16 min wall clock**, 274 ms/step, **3.80 µs per step per
-particle** on 4 cores; Barnes–Hut is **22.5× faster** than an equally optimised
-direct O(N²) sum at the same N.
+Simulation cost on 4 idle cores: **7.16 min wall clock**, 274 ms/step,
+**3.80 µs per step per particle**; Barnes–Hut is **19.7–22.5× faster** than an
+equally optimised direct O(N²) sum at the same N (one full direct force
+evaluation at N = 72,000 takes 10.9 s against 0.55 s for the tree).
 
 ## Validation status — all five checks PASS
 
@@ -33,6 +41,7 @@ direct O(N²) sum at the same N.
 | Control: RK2 vs leapfrog | RK2 drifts 2.07 × 10⁻³/Gyr, leapfrog −4.8 × 10⁻⁷/Gyr | RK2 > 3× worse |
 | Angular momentum | max \|ΔL\|/\|L₀\| = 1.10 × 10⁻³ | < 10⁻² |
 | Barnes–Hut force error at θ = 0.7 | median 3.3 × 10⁻³, p99 3.2 × 10⁻² | < 10⁻² / < 5 × 10⁻² |
+| Barnes–Hut speed-up at θ = 0.7 | 19.7× | > 5× |
 | Spurious COM drift (tree force asymmetry) | 0.129 km/s, 0.15 kpc over 2.2 Gyr | < 1 km/s |
 
 ## Deliverables

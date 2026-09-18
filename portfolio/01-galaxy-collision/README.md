@@ -10,7 +10,7 @@ prograde, moderately eccentric encounter and followed for 2.2 Gyr, through first
 pericentre, tidal tails and a bridge, a second passage, and the merger into a
 pressure-supported remnant.
 
-**72,000 particles · 1,500 steps · 2.2 Gyr · 7.2 minutes on 4 CPU cores ·
+**72,000 particles · 1,500 steps · 2.2 Gyr · 7.2 minutes on 4 idle CPU cores ·
 max |ΔE|/|E₀| = 1.4 × 10⁻³ · measured integrator convergence order 2.0005**
 
 Everything below — every number, every figure, the still and the film — is
@@ -25,8 +25,8 @@ literature except where explicitly cited as a model choice.
 |---|---|
 | Particles | 72,000 (2 × 36,000: 15,000 disk + 4,000 bulge + 17,000 live halo) |
 | Integrated time | 2.2 Gyr in 1,500 steps of 1.467 Myr |
-| Wall clock (4 cores) | **7.16 min**, 274 ms/step, **3.80 µs per step per particle** |
-| Barnes–Hut speed-up vs exact O(N²) | **22.5×** at θ = 0.7, same machine, same JIT |
+| Wall clock, simulation stage | **7.16 min** on idle cores (274 ms/step, **3.80 µs per step per particle**); 14.47 min in the recorded `make all`, which shared its cores — see §9 |
+| Barnes–Hut speed-up vs exact O(N²) | **19.7×** at θ = 0.7, same machine, same JIT (22.5× on the idle run) |
 | Energy conservation | max \|ΔE\|/\|E₀\| = **1.40 × 10⁻³**, bounded (see below) |
 | Angular-momentum conservation | max \|ΔL\|/\|L₀\| = **1.10 × 10⁻³** |
 | Integrator convergence order (measured) | **2.0005** (Kepler ladder, 5 timesteps) |
@@ -318,14 +318,14 @@ subsample of 1,024 sinks, and compared with the tree:
 | θ | median \|Δa\|/\|a\| | 99th pct | speed-up vs direct |
 |---|---|---|---|
 | 0.3 | 4.2 × 10⁻⁴ | 6.9 × 10⁻³ | 3.2× |
-| 0.5 | 1.4 × 10⁻³ | 2.1 × 10⁻² | 13.0× |
-| 0.6 | 2.2 × 10⁻³ | 2.7 × 10⁻² | 20.2× |
-| **0.7** | **3.3 × 10⁻³** | **3.2 × 10⁻²** | **22.5×** |
-| 0.9 | 5.7 × 10⁻³ | 4.6 × 10⁻² | 51.3× |
+| 0.5 | 1.4 × 10⁻³ | 2.1 × 10⁻² | 13.7× |
+| 0.6 | 2.2 × 10⁻³ | 2.7 × 10⁻² | 14.2× |
+| **0.7** | **3.3 × 10⁻³** | **3.2 × 10⁻²** | **19.7×** |
+| 0.9 | 5.7 × 10⁻³ | 4.6 × 10⁻² | 33.1× |
 
 The reference is itself a parallel, JIT-compiled O(N²) kernel on the same four
 cores, so this compares optimised against optimised; one full direct force
-evaluation at N = 72,000 takes 8.6 s against 0.38 s for the tree. The upper
+evaluation at N = 72,000 takes 10.9 s against 0.55 s for the tree. The upper
 percentiles of the *relative* error are dominated by the handful of particles
 sitting where the two galaxies' forces nearly cancel, so |a| → 0; the JSON also
 records |Δa|/a_rms for that reason. `figures/fig2_tree_accuracy.png`.
@@ -413,27 +413,36 @@ morphology changes fastest rather than running linearly in simulation time.
 
 ```bash
 pip install -r requirements.txt     # numpy, scipy, matplotlib, numba, imageio, ...
-make all      # simulate -> validate -> figures -> hero   (~18 min on 4 cores)
+make all      # simulate -> validate -> figures -> hero   (~13 min on 4 idle cores)
 make quick    # the same pipeline at reduced N            (~3 min)
-make test     # 58 pytest tests                           (~10 s)
+make test     # 58 pytest tests                           (~6 s)
 ```
 
 `make all` runs `run_all.py`, which executes the stages in order: `kepler`,
 `tree`, `simulate`, `isolated`, `conservation`, `morphology`, `figures`,
 `hero`, `summary`. Individual stages: `python3 run_all.py --only simulate,hero`.
 
-Everything is seeded (`SEED = 20260918`) and deterministic. Measured stage
-timings on the reference machine (4 cores, 15 GB, no GPU):
+Everything is seeded (`SEED = 20260918`) and **fully deterministic**: the tree
+build is serial and the force kernel writes one accumulator per particle with no
+cross-thread reduction, so there is no parallel non-associativity. Two
+independent full runs produced byte-identical `hero.mp4` files and identical
+validation numbers to every digit.
 
-| stage | time |
-|---|---|
-| kepler | 0.35 min |
-| tree | 0.40 min |
-| simulate | 7.17 min |
-| isolated | 2.77 min |
-| conservation | 0.80 min |
-| morphology + figures + summary | 0.23 min |
-| hero (still + 540-frame film) | ≈ 5.5 min |
+Measured stage timings. The left column is the `make all` recorded in
+`results/summary.json`; that run happened to share its four cores with two other
+pipelines, so the right column gives the same stages measured earlier on an
+idle machine. Both are real measurements of the same code on the same data.
+
+| stage | recorded `make all` (shared cores) | idle machine |
+|---|---|---|
+| kepler | 0.01 min | 0.01 min |
+| tree | 0.54 min | 0.40 min |
+| simulate | 14.47 min (557 ms/step) | **7.16 min (274 ms/step)** |
+| isolated | 3.18 min | 2.77 min |
+| conservation | 0.45 min | 0.80 min |
+| morphology + figures + summary | 0.16 min | 0.23 min |
+| hero (still + 540-frame film) | 6.87 min | ≈ 3.5 min |
+| **total** | **25.7 min** | **≈ 13 min** |
 
 `ffmpeg` is not required on `PATH`; the static binary shipped with
 `imageio-ffmpeg` is used.
@@ -442,7 +451,7 @@ timings on the reference machine (4 cores, 15 GB, no GPU):
 
 ```
 src/galcol/     units, profiles, ics, tree, integrator, simulate, analysis, render, production
-tests/          58 pytest tests (small-N, ~10 s)
+tests/          58 pytest tests (small-N, ~6 s)
 validation/     the four required checks + the tree-accuracy study, and their JSON output
 figures/        make_figures.py and the six PNGs
 media/          hero.png, hero.mp4, render driven by ../render_hero.py
@@ -497,9 +506,13 @@ Stated plainly; none of these are hidden in the numbers above.
 9. **Two identical galaxies (1:1 mass ratio).** Unequal-mass mergers behave
    differently (the smaller galaxy is disrupted, the larger survives more
    nearly intact); not explored.
-10. **Timing varies.** Tree-walk timings on this shared machine vary by up to
-    ~2× between runs. Quoted wall-clock and speed-up figures come from the
-    run recorded in `results/summary.json`.
+10. **Timing varies; physics does not.** The reference machine is shared, and
+    the recorded `make all` ran concurrently with two other pipelines, so its
+    wall-clock numbers are about 2× the idle-machine values (557 vs 274 ms per
+    step). Both are quoted in §9. Every physical result — energy and
+    angular-momentum errors, force errors, structural changes, merger time,
+    tail length, remnant shape — was byte-identical between the two runs, so
+    only the timings are affected.
 
 ---
 
